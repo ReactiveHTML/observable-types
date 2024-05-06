@@ -1,0 +1,40 @@
+{
+  "name": "observable-types",
+  "version": "0.1.0-rc11",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/types/index.d.ts",
+  "sideEffect": false,
+  "scripts": {
+    "start": "vite",
+    "build": "rimraf dist && rollup --bundleConfigAsCjs --config rollup.config.ts --configPlugin typescript",
+    "dev": "rimraf dist && rollup -w --bundleConfigAsCjs --config rollup.config.ts --configPlugin typescript",
+    "serve": "vite preview"
+  },
+  "stackblitz": {
+    "startCommand": "vite"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.5",
+    "esbuild": "^0.19.11",
+    "esbuild-jest": "^0.5.0",
+    "jest": "^27.2.0",
+    "rimraf": "^3.0.2",
+    "rollup": "^4.9.5",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.2.9"
+  },
+  "peerDependencies": {
+    "rxjs": ">=6.0.0",
+    "rimmel": ">=1.1.1"
+  }
+}
