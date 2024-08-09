@@ -1,4 +1,3 @@
-
 export type StartPos = number;
 export type DestPos = number;
 export type Pos = number;

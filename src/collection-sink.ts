@@ -1,32 +1,41 @@
-import { Sink } from 'rimmel';
-import type { HTMLContainerElement, HTMLString } from 'rimmel';
-import { DataOperation } from './types/ui-command';
+import type { ExplicitSink, HTMLContainerElement, HTMLString, Sink } from 'rimmel';
+import type { UIOperation } from './types/ui-command';
+import { wrapxy } from './wrapxy';
 
 // const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${function() { item.title = this.value }}"> (${item.rnd})</li>`;
 // const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${[item, 'title']}"> (${item.rnd}) <button onclick="${[item, undefined]}">X</button></li>`;
-type ItemTemplate = (item: unknown) => HTMLString;
+type ItemTemplate<I> = (item: I) => HTMLString;
 
-export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(stream: CollectionType, template: ItemTemplate): Sink<T> => {
-
-  const sink: Sink<T> = (node: HTMLElement) => {
+// export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(stream: CollectionType, template: ItemTemplate): Sink<T> => {
+export const CollectionSink: ExplicitSink<'content'> = <I extends object>(stream: I, template: ItemTemplate<I>) => {
+  const sink: Sink<HTMLContainerElement> = (node: HTMLContainerElement) => {
     // TODO: performance, if we have a very large number of elements to move/change,
     // detach the parent node from the DOM, remove children
     // then reattach the parent => reduce reflow/repaint
     // Rimmel currently doesn't support reattaching the parent node
 
+	let filterFn: (item: I) => boolean;
+
     const appendFn = node.insertAdjacentHTML.bind(node, 'beforeend');
 
     const prependFn = node.insertAdjacentHTML.bind(node, 'afterbegin');
 
-    const assignFn = (str: HTMLString) => node.innerHTML = str;
+    const render = (items: I[]) => {
+		let v = items;
+		if(filterFn) {
+			v = v.filter(filterFn);
+		};
+		//node.innerHTML = v.map(x => template(wrapxy<I>(x, stream.topic, stream))).join('');
+		node.innerHTML = v.map(template).join('');
+	}
 
-    // const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) => node.children[pos].innerHTML = str;
+    const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) => node.children[pos].innerHTML = str;
 
-    const replaceChildFn = ([pos, data]: [number, unknown]) => node.children[pos].outerHTML = template(data);
+    const replaceChildFn = ([pos, data]: [number, I]) => node.children[pos].outerHTML = template(data);
 
-    const shiftFn = () => node.firstChild?.remove();
+    const shiftFn = () => node.firstElementChild?.remove();
 
-    const popFn = () => node.lastChild?.remove();
+    const popFn = () => node.lastElementChild?.remove();
 
     const removeChildren = (node: HTMLElement, pos: number, count: number) => {
       for(var i=0;i<count;i++)
@@ -41,12 +50,10 @@ export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(s
       }
     };
 
-    const spliceFn = (pos: number, deleteCount: number, ...newItems: (undefined | ItemTemplate | ItemTemplate[])[]) => {
-
-      // if(deleteCount > 0) {
+    const spliceFn = (pos: number, deleteCount: number, newItems: (undefined | ItemTemplate<I> | ItemTemplate<I>[])[]) => {
       removeChildren(node, pos, deleteCount);
       if(newItems?.length) {
-        insert(node, pos, <HTMLString>newItems.map(template).join(''));
+        insert(node, pos, <HTMLString>newItems.map(i=>template(i)).join(''));
       }
     };
 
@@ -63,14 +70,14 @@ export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(s
       }
     };
 
-    return ([command, args]: DataOperation<I>) => {
+    return ([command, args]: UIOperation<I>) => {
       switch(command) {
         case 'add':
         case 'push':
-          appendFn([].concat(args).map(template).join(''));
+          appendFn([].concat(args).map(i=>template(i)).join(''));
           break;
         case 'unshift':
-          prependFn([].concat(args).map(template).join(''));
+          prependFn([].concat(args).map(i=>template(i)).join(''));
           break;
         case 'splice':
           spliceFn(...args);
@@ -81,16 +88,22 @@ export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(s
         case 'shift':
           shiftFn();
           break;
+        // case 'softFilter': // TODO
+        // case 'hardFilter': // TODO
+        case 'setFilter':
+          filterFn = args;
+          render(stream.toArray());
+          break;
         case 'assign':
         case 'sort':
         case 'reverse':
-            assignFn(args.map(template).join(''));
+          render(<I[]>args);
           break;
         case 'replace':
           replaceChildFn(args);
           break;
         case 'update':
-          // updateChildFn(args);
+          //updateChildFn([args[0], args[1], template(args[1])]);
           break;
         case 'move':
           moveFn(...args);
@@ -101,8 +114,12 @@ export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(s
     };
   };
 
-  sink.sink = 'collection';
-  sink.stream = stream;
+  const descriptor = {
+    type: 'sink',
+    source: stream,
+    sink,
+  }
 
-  return sink;
+  return descriptor;
 };
+

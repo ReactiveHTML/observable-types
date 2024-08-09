@@ -9,7 +9,7 @@ export interface Collection<T> extends Array<T> {
 	observe: (prop: string) => Observable<any>;
 };
 
-export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], Item: () => I = Object, CommandStream?: Observable<DataOperation<I>>) => {
+export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], Item: (x: any) => I = Object, CommandStream?: Observable<DataOperation<I>>) => {
 	const topic2 = new Subject<UIOperation<I>>();
 	const topic = new BehaviorSubject<UIOperation<I>>(['assign', wrapxy<I>(_source, topic2, _source)]);
 	topic2.subscribe(topic);
@@ -59,7 +59,13 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 			topic.next(['unshift', wrapped]);
 		}],
 
-		['forEach', _source.forEach.bind(_source)],
+		['_forEach', _source.forEach.bind(_source)],
+		['forEach', fn => {
+			_source
+				.map(x => wrapxy<I>(x, topic, _source))
+				.forEach(fn)
+			}
+		],
 		// findIndex: source.findIndex.bind(source),
 
 		['sort', (fn: (a: unknown, b: unknown) => number) => {
@@ -92,6 +98,13 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 			return source;
 		}],
 
+		['setFilter', (filterFn: (item: I) => boolean) => {
+			//_source.splice(0, Infinity, ...newItems);
+			//source = newItems // can't do, 'cause the other functions hold a reference to the array
+			topic.next(['setFilter', filterFn]);
+			return source;
+		}],
+
 		['move', (src: number, dst: number, count: number = 1) => {
 			const removed = _source.splice(src, count);
 			_source.splice(dst, 0, ...removed);
@@ -107,7 +120,7 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		// 	//startWith(['assign', source]),
 		// ))),
 
-		['toJSON', () => _source],
+		['toJSON', () => JSON.stringify(_source)],
 		['toArray', () => _source],
 
 		[Symbol.toStringTag, _source[Symbol.toStringTag]],
@@ -152,3 +165,4 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		},
 	});
 };
+
