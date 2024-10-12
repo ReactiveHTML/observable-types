@@ -1,7 +1,7 @@
-import { Subject, filter, map } from 'rxjs';
+import type { UIOperation } from './types/ui-command';
+import type { Pos } from './types/array-meta';
 
-import { UIOperation } from './types/ui-command';
-import { Pos, StartPos } from './types/array-meta';
+import { Subject, filter, map, startWith } from 'rxjs';
 
 const objectProxies = new WeakMap<Object, Subject<any>>();
 
@@ -9,26 +9,18 @@ const objectProxies = new WeakMap<Object, Subject<any>>();
  * An Observable Object Proxy
 **/
 export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation<I>>, container: I[]) => {
-
-	type OPS = 'replace' | 'update';
-	type SHAPES<T> =
-		T extends 'replace' ? [Pos, I]
-		: T extends 'update' ? [string, I]
-		: unknown;
-
 	let bs = objectProxies.get(obj);
 	if(!bs) {
 		bs = new Subject<[string, any]>();
 		objectProxies.set(obj, bs);
 	}
 
-	return new Proxy(<I[]>obj, <ProxyHandler<I[]>>{
+	return new Proxy(<I>obj, <ProxyHandler<I>>{
 		deleteProperty: (target, prop) => {
-			debugger;
 //			const idx = container.indexOf(target);
 //			const idx: StartPos = obj.indexOf(target);
 			const result = delete target[prop];
-			topic.next(['delete', [position]]);
+			topic.next(['delete', [prop]]);
 			return result;
 		},
 		get(_target, prop, _caller) {
@@ -39,25 +31,26 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 							filter(x => !!x),
 							filter(([key, value]) => key == p),
 							map(([_, value]) => value),
+							startWith(_target[p]),
 						);
-						ret.value = obj[p];
+						// ret.value = obj[p]; // Sure???
 						return ret;
 					} else {
 						return bs;
 					}
 				}
-			} else if (prop == 'observed') {
-				return new Proxy(obj, {
-					get(target, prop, proxy) {
-						const stream = bs.pipe(
-							filter(x => !!x),
-							filter(([key, value]) => key == prop),
-							map(([_, value]) => value),
-						);
-						stream.value = obj[prop];
-						return stream;
-					}
-				});
+//			} else if (prop == 'observed') {
+//				return new Proxy(obj, {
+//					get(target, prop, proxy) {
+//						const stream = bs.pipe(
+//							filter(x => !!x),
+//							filter(([key, value]) => key == prop),
+//							map(([_, value]) => value),
+//						);
+//						stream.value = obj[prop];
+//						return stream;
+//					}
+//				});
 			} else if (prop == '_delete') { // FIXME: maybe use a symbol, or some other way to avoid collisions
 				return () => {
 					// console.log('Wrapxy: _delete', target, prop, caller, obj);
@@ -89,3 +82,4 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 		},
 	});
 };
+

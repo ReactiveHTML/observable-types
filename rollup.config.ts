@@ -21,7 +21,7 @@ const cjs: OutputOptions = {
   freeze: false,
   // generatedCode: 'es6',
   // interop: 'default',
-  sourcemap: "inline",
+  sourcemap: true,
 }
 
 const es: OutputOptions = {
@@ -36,7 +36,7 @@ const globalVar: OutputOptions = {
   entryFileNames: '[name].js',
   freeze: true,
   generatedCode: 'es2015',
-  sourcemap: "inline",
+  sourcemap: true,
   format: 'esm',
   globals: {
     'rml': 'rimmel',
@@ -50,7 +50,15 @@ const preserveModules = {
 
 export default [
   {
+    external: [
+      ...peerDependencies,
+      'rimmel',
+      'rxjs',
+    ],
     input: './src/index.ts',
+    treeshake: {
+      propertyReadSideEffects: false,
+    },
     plugins: [
       nodeResolve({ preferBuiltins: true }),
       commonjs(),
@@ -61,42 +69,63 @@ export default [
         declarationDir: './dist/types',
       }),
       terser(),
-    ],
-    output: [ cjs, es ],
-    external: [
-      ...peerDependencies,
-      'rimmel',
-      'rxjs',
-    ]
-  },
-  {
-    input: './src/index.ts',
-    plugins: [
-      nodeResolve({ preferBuiltins: true }),
-      commonjs(),
-      json(),
-      typescript({
-        tsconfig: './tsconfig.build.json',
-        sourceMap: true,
-        outDir: preserveModules.dir,
-        declaration: false,
-      }),
-      terser(),
+      // visualizer({ filename: 'bundle-stats.html' }),
     ],
     output: [
-      {
-        ...cjs,
-        ...preserveModules,
-      },
-      {
-        ...es,
-        ...preserveModules,
-      }
+      cjs,
+      es,
     ],
-    external: [
-      ...peerDependencies,
-      'rimmel',
-      'rxjs',
-    ]
   },
+
+
+  // {
+  //   input: './src/index.ts',
+  //   plugins: [
+  //     nodeResolve({ preferBuiltins: true }),
+  //     commonjs(),
+  //     json(),
+  //     typescript({
+  //       tsconfig: './tsconfig.build.json',
+  //       sourceMap: true,
+  //       declarationDir: './dist/types',
+  //     }),
+  //     terser(),
+  //   ],
+  //   output: [ cjs, es ],
+  //   external: [
+  //     ...peerDependencies,
+  //     'rimmel',
+  //     'rxjs',
+  //   ]
+  // },
+  // {
+  //   input: './src/index.ts',
+  //   plugins: [
+  //     nodeResolve({ preferBuiltins: true }),
+  //     commonjs(),
+  //     json(),
+  //     typescript({
+  //       tsconfig: './tsconfig.build.json',
+  //       sourceMap: true,
+  //       outDir: preserveModules.dir,
+  //       declaration: false,
+  //     }),
+  //     terser(),
+  //   ],
+  //   output: [
+  //     {
+  //       ...cjs,
+  //       ...preserveModules,
+  //     },
+  //     {
+  //       ...es,
+  //       ...preserveModules,
+  //     }
+  //   ],
+  //   external: [
+  //     ...peerDependencies,
+  //     'rimmel',
+  //     'rxjs',
+  //   ]
+  // },
 ] as RollupOptions[];

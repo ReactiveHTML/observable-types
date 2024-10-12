@@ -1,5 +1,4 @@
-import { ArrayMethod } from './array-meta';
-import { DestPos, Count, DeleteCount, StartPos, Pos } from './array-meta';
+import type { ArrayMethod, DestPos, Count, DeleteCount, StartPos, Pos } from './array-meta';
 
 type Key = string;
 type Value = any;
@@ -13,14 +12,15 @@ export type UIOperation<I> =
 	| ['sort', I[]]
 	| ['reverse', I[]]
 
-	| ['assign', I | I[]]
+	| ['assign', I[]]
 
 //| ['replace', [StartPos, I[]]]
+	| ['delete', Pos[]]
 	| ['replace', [Pos, I]]
 	| ['update', [Pos, Key, Value]] // if descendant elements update themselves, this is not needed, right?
 
 	| ['setFilter' | 'softFilter' | 'hardFilter', (item: I) => boolean]
-	| ['add' | 'push', I | I[]]
+	| ['add' | 'push' | 'next', I | I[]]
 	| ['unshift', I | I[]]
 	| ['move', [StartPos, DestPos, Count?]]
 	| ['splice', [StartPos, DeleteCount, (I | I[])?]]

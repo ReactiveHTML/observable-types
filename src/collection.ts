@@ -1,19 +1,20 @@
+import type { ArrayModificationMethod } from './types/array-meta';
+import type { UIOperation } from './types/ui-command';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { wrapxy } from './wrapxy';
-import { DataOperation, UIOperation } from './types/ui-command';
-import { ArrayModificationMethod } from './types/array-meta';
 
 export interface Collection<T> extends Array<T> {
 	assign: (newItems: T[]) => void;
 	move: (src: number, dst: number, count: number) => void;
 	observe: (prop: string) => Observable<any>;
+	toArray: () => T[];
 };
 
-export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], Item: (x: any) => I = Object, CommandStream?: Observable<DataOperation<I>>) => {
-	const topic2 = new Subject<UIOperation<I>>();
+export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], Item: (x: any) => I = Object, CommandStream?: Observable<UIOperation<I>>) => {
+	const topic2 = new Subject<UIOperation<I[]>>();
 	const topic = new BehaviorSubject<UIOperation<I>>(['assign', wrapxy<I>(_source, topic2, _source)]);
 	topic2.subscribe(topic);
-	const source = wrapxy<I>(_source, topic, _source);
+	const source = wrapxy<I[]>(_source, topic, _source);
 
 	// TODO: review and clean up
 	const tee = (prop: ArrayModificationMethod, ...args) => {
@@ -43,8 +44,13 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k].bind(_source)]),
 		...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, tee.bind(_source, k)]),
 		...<UIOperation<I>[]>['unshift'].map(k => [k, tee2.bind(_source, k)]),
+		// ['unshift', (...args: I[]) => {
+		// 	const res = _source.unshift(...args);
+		// 	topic.next(<UIOperation<I>>['unshift', ...args.map(x => wrapxy<I>(x, topic, _source))]);
+		// 	return res;
+		// }],
 
-		['splice', (start, deleteCount, ...newItems: I[]) => {
+		['splice', (start: number, deleteCount: number, ...newItems: I[]) => {
 			_source.splice(start, deleteCount, ...newItems);
 			const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
 			topic.next(<UIOperation<I>>['splice', [start, deleteCount, wrapped]]);
@@ -60,7 +66,8 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		}],
 
 		['_forEach', _source.forEach.bind(_source)],
-		['forEach', fn => {
+
+		['forEach', (fn: (item: I) => void) => {
 			_source
 				.map(x => wrapxy<I>(x, topic, _source))
 				.forEach(fn)
@@ -68,7 +75,7 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		],
 		// findIndex: source.findIndex.bind(source),
 
-		['sort', (fn: (a: unknown, b: unknown) => number) => {
+		['sort', (fn: (a: I, b: I) => number) => {
 			_source.sort(fn);
 			// TODO: use fn results for smart repositioning info...
 			topic.next(<['sort', I[]]>['sort', source]);
@@ -98,6 +105,12 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 			return source;
 		}],
 
+		['replace', (pos: number, newItem: I) => {
+			_source[pos] = newItem;
+			topic.next(['replace', [pos, newItem]]);
+			return source;
+		}],
+
 		['setFilter', (filterFn: (item: I) => boolean) => {
 			//_source.splice(0, Infinity, ...newItems);
 			//source = newItems // can't do, 'cause the other functions hold a reference to the array
@@ -122,6 +135,7 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 
 		['toJSON', () => JSON.stringify(_source)],
 		['toArray', () => _source],
+		['toWrappedArray', () => _source.map(x => wrapxy<I>(x, topic, _source))],
 
 		[Symbol.toStringTag, _source[Symbol.toStringTag]],
 		[Symbol.iterator, _source[Symbol.iterator]],
@@ -141,7 +155,7 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		_m.get(cmd)(...args);
 	})
 
-	return <C>new Proxy(<C>{}, <ProxyHandler<C>>{
+	return <C>new Proxy(<C>_source, <ProxyHandler<C>>{
 		deleteProperty: (target, prop: any) => {
 			if (isNaN(prop)) {
 				const r = delete target[prop];
