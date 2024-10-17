@@ -1,13 +1,18 @@
 import type { ArrayModificationMethod } from './types/array-meta';
+import type { ObservableItem } from './types/observable-object';
 import type { UIOperation } from './types/ui-command';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import type { Observable } from 'rxjs';
+
+import { BehaviorSubject, Subject } from 'rxjs';
 import { wrapxy } from './wrapxy';
+import { CollectionSink } from './collection-sink';
 
 export interface Collection<T> extends Array<T> {
 	assign: (newItems: T[]) => void;
-	move: (src: number, dst: number, count: number) => void;
+	move: (src: number, dst: number, count?: number) => void;
 	observe: (prop: string) => Observable<any>;
 	toArray: () => T[];
+	toWrappedArray: () => ObservableItem<T>[];
 };
 
 export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], Item: (x: any) => I = Object, CommandStream?: Observable<UIOperation<I>>) => {
@@ -38,12 +43,16 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 
 	const _m = new Map<string | number | symbol, any>([
 		['_data', source],
-		['sink', 'collection'], // Tell Rimmel we're a sink
+		// ['type', 'sink'], // Tell Rimmel we're a sink
+		// ['t', 'sink'], // Tell Rimmel we're a sink
+		// ['sink', node => CollectionSink(_m, i => `rendered> ${i}`)(node)],
 		['subscribe', topic.subscribe.bind(topic)],
+		['pipe', topic.pipe.bind(topic)],
 
 		...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k].bind(_source)]),
 		...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, tee.bind(_source, k)]),
 		...<UIOperation<I>[]>['unshift'].map(k => [k, tee2.bind(_source, k)]),
+
 		// ['unshift', (...args: I[]) => {
 		// 	const res = _source.unshift(...args);
 		// 	topic.next(<UIOperation<I>>['unshift', ...args.map(x => wrapxy<I>(x, topic, _source))]);
@@ -101,7 +110,7 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		['assign', (newItems: I[]) => {
 			_source.splice(0, Infinity, ...newItems);
 			//source = newItems // can't do, 'cause the other functions hold a reference to the array
-			topic.next(['assign', newItems]);
+			topic.next(['assign', newItems.map(x => wrapxy<I>(x, topic, _source))]);
 			return source;
 		}],
 
@@ -155,7 +164,7 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		_m.get(cmd)(...args);
 	})
 
-	return <C>new Proxy(<C>_source, <ProxyHandler<C>>{
+	return <C & Array<C> & Collection<C> & Observable<C>>new Proxy(<C>_source, <ProxyHandler<C>>{
 		deleteProperty: (target, prop: any) => {
 			if (isNaN(prop)) {
 				const r = delete target[prop];
@@ -179,4 +188,3 @@ export const Collection = <C extends I[], I extends Object>(_source = <I[]>[], I
 		},
 	});
 };
-

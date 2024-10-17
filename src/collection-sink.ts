@@ -1,32 +1,33 @@
 import type { ExplicitSink, HTMLContainerElement, HTMLString, Sink, SinkBindingConfiguration } from 'rimmel';
+import type { Observable } from 'rxjs';
 import type { UIOperation } from './types/ui-command';
-// import { SINK_TAG } from 'rimmel';
-import { wrapxy } from './wrapxy';
-import { Collection } from './collection';
 
-const SINK_TAG = 'sink';
+import { ADD, ASSIGN, MOVE, NEXT, POP, PUSH, REPLACE, REVERSE, SET_FILTER, SHIFT, SORT, SPLICE, UNSHIFT, UPDATE } from './constants';
+import { SINK_TAG } from 'rimmel';
+import { Collection } from './collection';
+import { ObservableItem } from './types/observable-object';
+import { Count, Pos } from './types/array-meta';
 
 // const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${function() { item.title = this.value }}"> (${item.rnd})</li>`;
 // const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${[item, 'title']}"> (${item.rnd}) <button onclick="${[item, undefined]}">X</button></li>`;
-type ItemTemplate<I> = (item: I) => HTMLString;
+type ItemTemplate<I> = (item: I, index: number, _?: any | never) => HTMLString;
 
 // export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(stream: CollectionType, template: ItemTemplate): Sink<T> => {
 export const CollectionSink: ExplicitSink<'content'> =
-	<I extends object>(stream: Collection<I>, template: ItemTemplate<I>) => {
+	<I extends object>(stream: Collection<I>, template: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation> ) => {
 		const sink: Sink<HTMLContainerElement> = (node: HTMLContainerElement) => {
 			// TODO: performance, if we have a very large number of elements to move/change,
 			// detach the parent node from the DOM, remove children
 			// then reattach the parent => reduce reflow/repaint
-			// Rimmel currently doesn't support reattaching the parent node
 
 			let sortFn: (a: I, b: I) => number;
-			let filterFn: (item: I) => boolean;
+			let filterFn: (item: I, index: number, array: I[]) => boolean;
 
 			const appendFn = node.insertAdjacentHTML.bind(node, 'beforeend');
 
 			const prependFn = node.insertAdjacentHTML.bind(node, 'afterbegin');
 
-			const render = (items: I[]) => {
+			const render = (items: ObservableItem<I>[]) => {
 				let v = items;
 				if(filterFn) {
 					v = v.filter(filterFn);
@@ -37,7 +38,7 @@ export const CollectionSink: ExplicitSink<'content'> =
 
 			const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) => node.children[pos].innerHTML = str;
 
-			const replaceChildFn = ([pos, data]: [number, I]) => node.children[pos].outerHTML = template(data);
+			const replaceChildFn = ([pos, data]: [number, I]) => node.children[pos].outerHTML = template(data, pos);
 
 			const shiftFn = () => node.firstElementChild?.remove();
 
@@ -59,7 +60,7 @@ export const CollectionSink: ExplicitSink<'content'> =
 			const spliceFn = (pos: number, deleteCount: number, newItems: (undefined | ItemTemplate<I> | ItemTemplate<I>[])) => {
 				removeChildren(node, pos, deleteCount);
 				if(newItems?.length) {
-					const content = (<I[]>newItems).map(i=>template(i)).join('') as HTMLString;
+					const content = (<I[]>newItems).map(template).join('') as HTMLString;
 					if(pos < node.children.length) {
 						insert(node, pos, content);
 					} else {
@@ -81,57 +82,61 @@ export const CollectionSink: ExplicitSink<'content'> =
 				}
 			};
 
-			return ([command, args]: UIOperation<I>) => {
+			const handler = ([command, args]: UIOperation<I>) => {
 				switch(command) {
-					case 'add':
-						case 'push':
-						appendFn((<UIOperation<I>>[]).concat(args).map(i=>template(i)).join(''));
-					break;
-					case 'unshift':
-						prependFn([].concat(args).map(i=>template(i)).join(''));
-					break;
-					case 'splice':
-						spliceFn(...args);
-					break;
-					case 'pop':
+					case ADD:
+					case PUSH:
+					case NEXT:
+						appendFn(([] as I[]).concat(<I[]>args).map(template).join(''));
+						break;
+					case UNSHIFT:
+						prependFn(([] as I[]).concat(<I[]>args).map(template).join(''));
+						break;
+					case SPLICE:
+						spliceFn(...args as [Pos, Count, (undefined | ItemTemplate<I> | ItemTemplate<I>[])]);
+						break;
+					case POP:
 						popFn();
-					break;
-					case 'shift':
+						break;
+					case SHIFT:
 						shiftFn();
-					break;
+						break;
 					// case 'softFilter': // TODO
 					// case 'hardFilter': // TODO
-					case 'setFilter':
+					case SET_FILTER:
 						filterFn = args;
 						render(stream.toWrappedArray());
-					break;
-					case 'assign':
-						case 'sort':
-						case 'reverse':
-						render(<I[]>args);
-					break;
-					case 'replace':
+						break;
+					case ASSIGN:
+					case SORT:
+					case REVERSE:
+						render(args as ObservableItem<I>[]);
+						break;
+					case REPLACE:
 						replaceChildFn(args);
-					break;
-					case 'update':
+						break;
+					case UPDATE:
 						//updateChildFn([args[0], args[1], template(args[1])]);
 						break;
-					case 'move':
+					case MOVE:
 						moveFn(...args);
-					break;
+						break;
 					// case 'refresh':
 					// case 'filter2 ?':
 				};
 			};
+
+			inputStream?.subscribe?.(handler);
+			return handler;
 		};
 
-		const descriptor = <SinkBindingConfiguration<Element>>{
+		return <SinkBindingConfiguration<Element>>{
 			type: SINK_TAG,
 			t: 'Collection',
 			source: stream,
 			sink,
+			// TODO: do we need to emit an initial value through a dedicated channel to render it synchronously?
+			// initial: stream.map(i => template(wrapxy<I>(i, stream.topic, stream))).join(''),
 		}
-
-		return descriptor;
 	};
 

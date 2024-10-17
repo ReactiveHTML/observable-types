@@ -12,9 +12,8 @@ export type UIOperation<I> =
 	| ['sort', I[]]
 	| ['reverse', I[]]
 
-	| ['assign', I[]]
+	| ['assign', I | I[]]
 
-//| ['replace', [StartPos, I[]]]
 	| ['delete', Pos[]]
 	| ['replace', [Pos, I]]
 	| ['update', [Pos, Key, Value]] // if descendant elements update themselves, this is not needed, right?
