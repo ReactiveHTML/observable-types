@@ -1,5 +1,4 @@
-import type { ObservableItem } from './types/array-meta';
-
+import type { ObservableItem } from './types/observable-item';
 import { rml } from 'rimmel';
 
 import { Collection } from './collection';
@@ -14,31 +13,23 @@ interface ItemType {
 
 const App = () => {
   const Item = (title: string): ItemType => ({ title, rnd: Math.round(Math.random() *1000) });
-  const data = Collection([
-    {title: '0', rnd: Math.round(Math.random() *1000)},
-    {title: '1', rnd: Math.round(Math.random() *1000)},
-    {title: '2', rnd: Math.round(Math.random() *1000)},
-    {title: '3', rnd: Math.round(Math.random() *1000)},
-    {title: '4', rnd: Math.round(Math.random() *1000)},
-    {title: '5', rnd: Math.round(Math.random() *1000)},
-    {title: '6', rnd: Math.round(Math.random() *1000)},
-    {title: '7', rnd: Math.round(Math.random() *1000)},
-  ], Item);
+  const initialValues = [...Array(10)].map((x, i)=>`Initial Item ${i}`);
+  const data = Collection<ItemType[], ItemType>(initialValues, Item);
 
   const append = (e: Event) => {
-    const content = e.target.parentElement.querySelector('input').value;
-    data.push(Item(content))
+    const content = (e.target as HTMLElement)?.parentElement?.querySelector('input').value;
+    data.push(content)
   }
 
   const prepend = (e: Event) => {
     const content = e.target.parentElement.querySelector('input').value;
-    data.unshift(Item(content))
+    data.unshift(content)
   }
 
   const insertAt = (e: Event) => {
     const pos = parseInt(e.target.parentElement.querySelector('input.pos').value, 10);
     const count = parseInt(e.target.parentElement.querySelector('input.count').value, 10);
-    data.splice(pos, 0, ...[...Array(count)].map((_, i)=>Item(`inserted @${pos +i}`)));
+    data.splice(pos, 0, ...[...Array(count)].map((_, i)=>`inserted @${pos +i}`));
   };
 
   const move = (e: Event) => {
@@ -62,7 +53,7 @@ const App = () => {
     // console.log('PRINT', item);
     return rml`
       <li>
-        <input value="${item.observed.title}" onchange="${[item, 'title']}">
+        <input value="${item.observable.title}" onchange="${[item, 'title']}">
         (${item.rnd})
         <button onclick="${item[DELETE]}">X</button>
       </li>`

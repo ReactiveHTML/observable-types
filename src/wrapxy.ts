@@ -15,6 +15,8 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 		objectProxies.set(obj, bs);
 	}
 
+	// Object.defineProperty(obj, Symbol.toStringTag, {value: 'xroxy', enumerable: false, writable: false, configurable: false});
+	// obj.toString = () => 'WWW';
 	const p = new Proxy(<I>obj, <ProxyHandler<I>>{
 		deleteProperty: (target, prop) => {
 //			const idx = container.indexOf(target);
@@ -26,20 +28,23 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 		get(_target, prop, _caller) {
 			// .observe(prop)
 			if (prop == 'observe') {
-				return (p?: string) => {
-					if(p) {
+				return (pr?: string) => {
+					if(pr) {
 						const ret = bs.pipe(
 							filter(x => !!x),
-							filter(([key, value]) => key == p),
+							filter(([key, value]) => key == pr),
 							map(([_, value]) => value),
-							startWith(_target[p]),
+							startWith(_target[pr]),
 						);
-						// ret.value = obj[p]; // Sure???
+						// ret.value = obj[pr]; // Sure???
 						return ret;
 					} else {
 						return bs;
 					}
 				}
+			} else if (prop == 'subscribe') {
+				debugger;
+				return topic.subscribe.bind(topic);
 			} else if (prop == 'observed' || prop == 'observable') {
 				// .observable.prop
 				return new Proxy(obj, {

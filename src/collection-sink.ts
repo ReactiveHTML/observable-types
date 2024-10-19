@@ -1,27 +1,27 @@
 import type { ExplicitSink, HTMLContainerElement, HTMLString, Sink, SinkBindingConfiguration } from 'rimmel';
-import type { Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import type { UIOperation } from './types/ui-command';
 
 import { ADD, ASSIGN, MOVE, NEXT, POP, PUSH, REPLACE, REVERSE, SET_FILTER, SHIFT, SORT, SPLICE, UNSHIFT, UPDATE } from './constants';
 import { SINK_TAG } from 'rimmel';
 import { Collection } from './collection';
-import { ObservableItem } from './types/observable-object';
+import { ObservableItem } from './types/observable-item';
 import { Count, Pos } from './types/array-meta';
+import { FilterFunction } from './types/filter-function';
 
 // const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${function() { item.title = this.value }}"> (${item.rnd})</li>`;
 // const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${[item, 'title']}"> (${item.rnd}) <button onclick="${[item, undefined]}">X</button></li>`;
-type ItemTemplate<I> = (item: I, index: number, _?: any | never) => HTMLString;
-
+type ItemTemplate<I> = (item: I, index: number, _?: any ) => HTMLString;
 // export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(stream: CollectionType, template: ItemTemplate): Sink<T> => {
 export const CollectionSink: ExplicitSink<'content'> =
-	<I extends object>(stream: Collection<I>, template: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation> ) => {
+	<I extends object>(stream: Collection<I>, template: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation<I>> ) => {
 		const sink: Sink<HTMLContainerElement> = (node: HTMLContainerElement) => {
 			// TODO: performance, if we have a very large number of elements to move/change,
 			// detach the parent node from the DOM, remove children
 			// then reattach the parent => reduce reflow/repaint
 
 			let sortFn: (a: I, b: I) => number;
-			let filterFn: (item: I, index: number, array: I[]) => boolean;
+			let filterFn: FilterFunction<I>;
 
 			const appendFn = node.insertAdjacentHTML.bind(node, 'beforeend');
 
@@ -38,7 +38,7 @@ export const CollectionSink: ExplicitSink<'content'> =
 
 			const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) => node.children[pos].innerHTML = str;
 
-			const replaceChildFn = ([pos, data]: [number, I]) => node.children[pos].outerHTML = template(data, pos);
+			const replaceChildFn = ([pos, data]: [number, ObservableItem<I>]) => node.children[pos].outerHTML = template(data, pos);
 
 			const shiftFn = () => node.firstElementChild?.remove();
 
@@ -57,10 +57,10 @@ export const CollectionSink: ExplicitSink<'content'> =
 				}
 			};
 
-			const spliceFn = (pos: number, deleteCount: number, newItems: (undefined | ItemTemplate<I> | ItemTemplate<I>[])) => {
+			const spliceFn = (pos: number, deleteCount: number, newItems?: (ObservableItem<I> | ObservableItem<I>[])) => {
 				removeChildren(node, pos, deleteCount);
-				if(newItems?.length) {
-					const content = (<I[]>newItems).map(template).join('') as HTMLString;
+				if((<ObservableItem<I>[]>newItems)?.length) {
+					const content = (<ObservableItem<I>[]>newItems).map(template).join('') as HTMLString;
 					if(pos < node.children.length) {
 						insert(node, pos, content);
 					} else {
@@ -84,43 +84,54 @@ export const CollectionSink: ExplicitSink<'content'> =
 
 			const handler = ([command, args]: UIOperation<I>) => {
 				switch(command) {
-					case ADD:
-					case PUSH:
-					case NEXT:
-						appendFn(([] as I[]).concat(<I[]>args).map(template).join(''));
-						break;
-					case UNSHIFT:
-						prependFn(([] as I[]).concat(<I[]>args).map(template).join(''));
-						break;
-					case SPLICE:
-						spliceFn(...args as [Pos, Count, (undefined | ItemTemplate<I> | ItemTemplate<I>[])]);
-						break;
-					case POP:
-						popFn();
-						break;
-					case SHIFT:
-						shiftFn();
-						break;
-					// case 'softFilter': // TODO
-					// case 'hardFilter': // TODO
-					case SET_FILTER:
-						filterFn = args;
-						render(stream.toWrappedArray());
-						break;
 					case ASSIGN:
 					case SORT:
 					case REVERSE:
 						render(args as ObservableItem<I>[]);
 						break;
-					case REPLACE:
-						replaceChildFn(args);
+
+					case ADD:
+					case PUSH:
+					case NEXT:
+						appendFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(template).join(''));
 						break;
+
+					case UNSHIFT:
+						prependFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(template).join(''));
+						break;
+
+					case SPLICE:
+						spliceFn(...args as [Pos, Count, (ObservableItem<I> | ObservableItem<I>[])?]);
+						break;
+
+					case POP:
+						popFn();
+						break;
+
+					case SHIFT:
+						shiftFn();
+						break;
+
+					// case 'softFilter': // TODO
+					// case 'hardFilter': // TODO
+
+					case SET_FILTER:
+						filterFn = <FilterFunction<I>>args;
+						render(stream.toWrappedArray());
+						break;
+
+					case REPLACE:
+						replaceChildFn(<[Pos, ObservableItem<I>]>args);
+						break;
+
 					case UPDATE:
 						//updateChildFn([args[0], args[1], template(args[1])]);
 						break;
+
 					case MOVE:
 						moveFn(...args);
 						break;
+
 					// case 'refresh':
 					// case 'filter2 ?':
 				};
