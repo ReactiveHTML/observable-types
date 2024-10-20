@@ -154,9 +154,8 @@ Install dependencies:
 ```bash
 # Copy code
 npm install
-
-# Run the tests:
 npm test
+vite
 ```
 
 ## License
