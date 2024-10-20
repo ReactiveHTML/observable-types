@@ -1,25 +1,16 @@
 # ObservableTypes
-This is a TypeScript/JavaScript library designed for managing structured data collections (e.g.: arrays of objects) with reactive bindings that the Observable/Observer interfaces (RxJS).
+A collection of TypeScript/JavaScript utilities designed to render structured data collections (e.g.: Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM.
 
+With these you can create reactive collections and manage operations on them in either an imperative or functional style.
 
-With these you can create reactive collections and manage operations on them in either an imperative, or functional style.
-
-This library integrates seamlessly with Observable UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel) which have first-class support for the Observable/Observer interfaces.
+This library has reactive bindings exposed through the Observable/Observer interfaces (e.g.: RxJS) and integrates seamlessly with Observable UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel) which have first-class support for them.
 
 ## Features
-ObservableTypes expose both the Observable and the Observer interfaces (like Rx.Subject), which makes them suitable for piping, streaming and merging with other reactive event streams.
-It also enables you to create data collections where changes are defined as streams.
+ObservableTypes expose both the Observable and the Observer interfaces (like the Rx.Subject), which makes them suitable for piping, streaming and merging with other reactive event streams.
 
-Additions? An observable stream.<br>
-Item Removals? An observable stream.<br>
-Moving items around? An observable stream.<br>
+It also enables you to create data collections where changes are described as event streams.
 
-These are the key features:
-
-- Wraps arrays into reactive data structures, allowing you to observe changes like additions, deletions, and modifications
-- Built on top of RxJS to leverage its powerful reactive streams
-- UI Binding: Supports binding data streams to UI elements, making it easier to build dynamic user interfaces with automatic updates
-- Command Streams: Allows operations on collections to be issued through commands, which can be observed and reacted to or simply sinked to the DOM for efficient rendering
+You can also subscribe to any event stream to feed your collections.
 
 ## Installation
 Install via npm:
@@ -35,36 +26,51 @@ import { Collection, CollectionSink } from 'observable-types';
 ```
 
 ## Key Concepts
+
 ### Collection
-A `Collection` is a hybrid construct that implements the Array, Observable and Observer interfaces.
+A `Collection` is a hybrid construct that implements the `Array`, the `Observable` and `Observer` interfaces. 
+It behaves just like an Array, with all its standard methods such as `push`, `pop`, `splice`, etc.
 
-This allows standard array operations such as `push`, `pop`, `splice`, to also emit semantic notifications for rendering engines so they can use them to render changes in the most efficient way without the need to perform any diffing work. E.G.: `.push()` becomes an instruction like "add one to the bottom", etc.
+These will emit semantic notifications for rendering so they can use them to make changes in a UI in efficient ways without the need to perform any complicated or anyways heavy diffing work. E.G.: `.push()` becomes an instruction like "append an item to the bottom of the view".
 
-Additional semantic operations are available, most notably `.move(from, to)`, to enable efficient drag'n'drop operations by only specifying which item needs to move where.
+Additional semantic operations are also available, most notably `.move(from, to)`, to enable efficient drag'n'drop operations by only specifying which item needs to move and where.
 
-
-#### Example:
+#### Basic Example:
 ```typescript
 import { Collection } from 'observable-types';
 
-const Item = value => ({ value, created: Date.now() });
+// Construct an Item from a value
+const Item = (value: string | number) =>
+  ({ value, created: Date.now() });
+
+// Create a simple Collection and pass the
+// Item constructor for type integrity
 const myList = Collection([1, 2, 3], Item);
 
 
-// A stream of 'unshift' operations
-const prepends = data.pipe(
-  filter(([cmd, data]) => cmd === 'unshift'),
-  map(([cmd, data]) => data),
+// Create a stream of "unshift" operations
+// `data` is an Observable, so can be
+// piped and subscribed
+const insertions = data.pipe(
+
+  filter(([ cmd ]) => cmd=='unshift'),
+  map(([ , data ]) => data),
+
 );
 
-prepends.subscribe((e) => {
+// Do something when items are inserted
+insertions.subscribe((e) => {
   console.log(`Added`, ...e, ' to the top');
 });
 
-// Modify the collection
-myArray.unshift(Item(4));
 
-// Logs: "Added {value: 'newItem', ... } to the top"
+// Finally, modify the collection
+myArray.unshift('new stuff');
+// Logs: "Added {value: 'new stuff', ... } to the top"
+
+myArray.push('other stuff');
+// Logs nothing, as we're only listening for
+// 'unshift' events
 ```
 
 ### Collection API
