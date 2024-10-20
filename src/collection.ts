@@ -56,7 +56,7 @@ export const Collection = <R, I extends Object>
 			['pipe', topic.pipe.bind(topic)],
 
 			...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k as keyof ArrayModificationMethod].bind(_source)]),
-			...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, tee.bind(_source, k as ('pop' | 'shift'))]),
+			...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, () => tee(k as ('pop' | 'shift'))]),
 
 			['splice', (start: number, deleteCount: number, ...newValues: I[]) => {
 				const newItems = newValues.map(toItem);
