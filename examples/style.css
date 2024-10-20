@@ -1,0 +1,84 @@
+body {
+  font-family: system-ui;
+}
+
+.col-layout {
+  display: flex;
+  padding-inline: 1rem;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+controls {
+  line-height: 2;
+}
+
+li {
+  line-height: 32px;
+  background-color: white;
+}
+
+li button {
+  padding: .1rem;
+}
+
+li.sq {
+  list-style-type: none;
+  cursor: ns-resize;
+}
+
+li.sq::before {
+  content: "[";
+  padding-right: 8px;
+}
+
+li.sq::after {
+  content: "]";
+  padding-left: 8px;
+}
+
+input[type="number"] {
+  width: 2rem;
+}
+.paused {
+  border: 2px inset;
+}
+
+.value-box {
+  width: 6rem;
+}
+
+.eval-box {
+  margin-block: 1rem;
+  border-radius: .4rem;
+}
+
+.eval-result {
+  background-color: #aaa;
+  padding: 1rem;
+}
+
+.eval-result::before {
+  content: "Result:"
+}
+
+.command-stream {
+  position: fixed;
+  /* margin: -1rem; */
+  padding: 1rem;
+  /* padding-block-start: 3rem; */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 10%;
+  overflow-y: scroll;
+  background-color: #eee;
+}
+
+.command-stream .lbl {
+  margin: 0;
+  /* position: absolute; */
+  /* top: 0; */
+}
+
+
