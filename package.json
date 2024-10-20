@@ -1,6 +1,6 @@
 {
   "name": "observable-types",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -12,6 +12,10 @@
     "dev": "rimraf dist && rollup -w --bundleConfigAsCjs --config rollup.config.ts --configPlugin typescript",
     "serve": "vite preview"
   },
+  "files": [
+    "dist/",
+    "favicon.svg"
+  ],
   "stackblitz": {
     "startCommand": "vite"
   },
@@ -34,7 +38,7 @@
     "vite": "^5.2.9"
   },
   "peerDependencies": {
-    "rxjs": ">=6.0.0",
-    "rimmel": "^1.2.0"
+    "rxjs": ">=5.5.0 || >=6.0.0 || >=7.0.0",
+    "rimmel": "^1.2.2"
   }
 }

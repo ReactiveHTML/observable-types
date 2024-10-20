@@ -1,8 +1,10 @@
 import type { ObservableItem } from './types/observable-item';
-import { rml } from 'rimmel';
+import { rml, Value, inputPipe, JSONDump } from 'rimmel';
 
-import { Collection } from './collection';
+import { Collection, ICollection } from './collection';
 import { CollectionSink } from './collection-sink';
+import { stringify } from 'querystring';
+import { filter, map, Subject } from 'rxjs';
 
 const DELETE = Symbol.for('delete');
 
@@ -14,26 +16,26 @@ interface ItemType {
 const App = () => {
   const Item = (title: string): ItemType => ({ title, rnd: Math.round(Math.random() *1000) });
   const initialValues = [...Array(10)].map((x, i)=>`Initial Item ${i}`);
-  const data = Collection<ItemType[], ItemType>(initialValues, Item);
+  const data = Collection<string, ItemType>(initialValues, Item);
 
   const append = (e: Event) => {
-    const content = (e.target as HTMLElement)?.parentElement?.querySelector('input').value;
+    const content = (e.target as HTMLElement).parentElement!.querySelector('input')!.value;
     data.push(content)
   }
 
   const prepend = (e: Event) => {
-    const content = e.target.parentElement.querySelector('input').value;
+    const content = (e.target as HTMLElement).parentElement!.querySelector('input')!.value;
     data.unshift(content)
   }
 
   const insertAt = (e: Event) => {
-    const pos = parseInt(e.target.parentElement.querySelector('input.pos').value, 10);
-    const count = parseInt(e.target.parentElement.querySelector('input.count').value, 10);
+    const pos = parseInt(((<HTMLElement>e.target)!.parentElement!.querySelector('input.pos') as HTMLInputElement)!.value, 10);
+    const count = parseInt(((<HTMLElement>e.target)!.parentElement!.querySelector('input.count') as HTMLInputElement)!.value, 10);
     data.splice(pos, 0, ...[...Array(count)].map((_, i)=>`inserted @${pos +i}`));
   };
 
   const move = (e: Event) => {
-    const inputs = [...(<HTMLElement>e.target).parentElement.querySelectorAll('input')];
+    const inputs = [...(<HTMLElement>e.target).parentElement!.querySelectorAll('input')];
     const from = parseInt(inputs[0].value, 10);
     const to = parseInt(inputs[1].value, 10);
     const count = parseInt(inputs[2].value, 10);
@@ -41,7 +43,7 @@ const App = () => {
   };
 
   const change = (e: Event) => {
-    const inputs = [...(<HTMLElement>e.target).parentElement.querySelectorAll('input')];
+    const inputs = [...(<HTMLElement>e.target).parentElement!.querySelectorAll('input')];
     const item = parseInt(inputs[0].value, 10);
     const newValue = inputs[1].value;
 
@@ -59,6 +61,26 @@ const App = () => {
       </li>`
   };
 
+  const EvalBox = (data: ICollection<ItemType, string>) => {
+    const FromInputBox = inputPipe(map((e: Event) => (<HTMLElement>e.target)!.parentElement!.querySelector('input')!.value));
+    const OnEnter = inputPipe(filter((e: KeyboardEvent) => e.key == 'Enter'));
+    JSONDump;
+
+    const stream = new Subject<string>().pipe(
+      map((x) => eval(`${x}`)),
+      map((x) => `result: ${x}`),
+    );
+
+    return rml`
+      <div>
+        <input placeholder="data[0].title" onkeydown="${OnEnter(Value(stream))}">
+        <button onclick="${FromInputBox(stream)}">Eval</button>
+
+        <div>${stream}</div>
+      </div>
+    `;
+  }
+
   return rml`
     <h2>Observable Collection</h2>
     <p>A proxied Array that maps every mutation operation (push, pop, shift, unshift, splice, sort, reverse) to efficient DOM update operations</p>
@@ -75,6 +97,8 @@ const App = () => {
       <div><button onclick="${insertAt}">Insert at position </button> <input value="3" size="2" class="pos"> <input value="2" size="2" class="count"></div>
       <button onclick="${() => data.sort((a, b) => a.title < b.title ? -1 : 1)}">.sort</button>
       <button onclick="${() => data.reverse()}">.reverse</button>
+
+      ${EvalBox(data)}
     </controls>
 
     <ol start="0">

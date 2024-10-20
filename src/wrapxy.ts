@@ -1,3 +1,4 @@
+import { ObservableItem } from './types/observable-item';
 import type { UIOperation } from './types/ui-command';
 
 import { Subject, filter, map, startWith } from 'rxjs';
@@ -8,7 +9,7 @@ const objectProxies = new WeakMap<Object, Subject<any>>();
 /**
  * An Observable Object Proxy
 **/
-export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation<I>>, container: I[]) => {
+export const wrapxy = <I extends Object>(obj: I, topic: Subject<UIOperation<I>>, container: I[]): ObservableItem<I> => {
 	let bs = objectProxies.get(obj);
 	if(!bs) {
 		bs = new Subject<[string, any]>();
@@ -21,8 +22,8 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 		deleteProperty: (target, prop) => {
 //			const idx = container.indexOf(target);
 //			const idx: StartPos = obj.indexOf(target);
-			const result = delete target[prop];
-			topic.next(['delete', [prop]]);
+			const result = delete target[prop as keyof I];
+			topic.next(<UIOperation<I>>['deleteProperty', [target, prop]]);
 			return result;
 		},
 		get(_target, prop, _caller) {
@@ -34,7 +35,7 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 							filter(x => !!x),
 							filter(([key, value]) => key == pr),
 							map(([_, value]) => value),
-							startWith(_target[pr]),
+							startWith(_target[pr as keyof I]),
 						);
 						// ret.value = obj[pr]; // Sure???
 						return ret;
@@ -55,7 +56,7 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 							filter(([key, value]) => key == prop),
 							map(([_, value]) => value),
 						);
-						stream.value = obj[prop];
+						stream.value = obj[prop as keyof I];
 						return stream;
 					}
 				});
@@ -69,7 +70,7 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 					//bs.next(<UIOperation<I>>['splice', [idx, 1]]);
 				};
 			} else {
-				const res = obj[prop];
+				const res = obj[prop as keyof I];
 				if (typeof res == 'object') {
 					return wrapxy(res, topic, container /*, Number(prop)*/);
 					// subscribe to deep changes?
@@ -80,7 +81,7 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 		},
 		set(target, prop: string, value) {
 			const position = container.indexOf(target);
-			target[prop] = value;
+			target[prop as keyof I] = value;
 			// if(!Array.isArray(target)) {
 			// topic.next(['replace', [position, wrapxy(target, topic, container)]]);
 			bs.next([prop, value]);
@@ -91,5 +92,5 @@ export const wrapxy = <I extends Object>(obj: Object, topic: Subject<UIOperation
 	});
 
 	Object.defineProperty(obj, Symbol.toStringTag, {value: '', enumerable: false, writable: false, configurable: false});
-	return p;
+	return p as ObservableItem<I>;
 };

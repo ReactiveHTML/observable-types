@@ -81,6 +81,8 @@ Since the `Collection` notifications are semantic, they give enough information 
 
 All you need is the collection and a template to use for rendering new items.
 
+Observable Types best shine when used with an Observable-aware UI library such as [Rimmel](https://github.com/reactivehtml/rimmel), in which connecting an observable stream to the DOM is as trivial as putting it in the template:
+
 #### Example 1 (with Rimmel templates)
 ```typescript
 import { Collection, CollectionSink } from 'observable-types';
@@ -100,29 +102,39 @@ document.body.innerHTML = rml`
   <input placeholder="new stuff" onchange="${Value(items)}">Add</button>
 `;
 ```
+[Run on StackBlitz](https://stackblitz.com/edit/observable-types-no-framework)
 
+
+It's not mandatory to use any UI library, though. In fact, you can also live without and imperatively sink an Observable Collection down the DOM by passing it a target node.
 #### Example 2 (with no UI library):
 ```typescript
+import type { ObservableItem } from 'observable-types';
 import { Collection, CollectionSink } from 'observable-types';
 
-const Item = (title) => ({ title });
-const ItemTemplate = item => `<li>${item.title}</li>`;
-const items = Collection([{ title: 'Task 1' }, { title: 'Task 2' }], Item);
+interface I {
+	title: string;
+	timestamp: number;
+}
+
+const Item = (title: string): I => ({ title, timestamp: Date.now() });
+const ItemTemplate = (item: ObservableItem<I>) => `<li>${item.title}</li>`;
+const items = Collection(['Item 1', 'Item 2'].map(i=>Item(i)), Item);
 const renderer = CollectionSink(items, ItemTemplate);
 
 // Bind to a DOM element
-list.subscribe(renderer.sink(document.querySelector('#my-list')));
+items.subscribe(renderer.sink(document.querySelector('#app')));
 
 // Make changes to see them rendered
-items.push(Item('Task 3'));
-items.assign(['New item 1', 'New item 2', 'New item 3'].map(Item));
-items.move(1, 2);
-items.pop();
-items.shift();
+setTimeout(() => items.push(Item('Item 3')), 1000);
+setTimeout(() => items.move(0, 1), 2000);
+setTimeout(() => items.pop(), 3000);
+setTimeout(() => items.shift(), 4000);
 ```
 
+[Run on StackBlitz](https://stackblitz.com/edit/observable-types-no-framework)
+
 ### Playground
-Check out the following [Kitchen Sink Application]() where you can play and experiment with the whole feature set
+Check out the following [Kitchen Sink Application](https://stackblitz.com/edit/observable-types-kitchen-sink) where you can play and experiment with the whole feature set
 
 ## Contributing
 Contributions are welcome! Please feel free to open issues or submit pull requests.

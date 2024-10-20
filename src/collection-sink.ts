@@ -1,10 +1,10 @@
 import type { ExplicitSink, HTMLContainerElement, HTMLString, Sink, SinkBindingConfiguration } from 'rimmel';
 import { Observable } from 'rxjs';
+import type { ICollection } from './collection';
 import type { UIOperation } from './types/ui-command';
 
 import { ADD, ASSIGN, MOVE, NEXT, POP, PUSH, REPLACE, REVERSE, SET_FILTER, SHIFT, SORT, SPLICE, UNSHIFT, UPDATE } from './constants';
 import { SINK_TAG } from 'rimmel';
-import { Collection } from './collection';
 import { ObservableItem } from './types/observable-item';
 import { Count, Pos } from './types/array-meta';
 import { FilterFunction } from './types/filter-function';
@@ -14,7 +14,7 @@ import { FilterFunction } from './types/filter-function';
 type ItemTemplate<I> = (item: I, index: number, _?: any ) => HTMLString;
 // export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(stream: CollectionType, template: ItemTemplate): Sink<T> => {
 export const CollectionSink: ExplicitSink<'content'> =
-	<I extends object>(stream: Collection<I>, template: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation<I>> ) => {
+	<I extends object>(stream: ICollection<I, any>, template: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation<I>> ) => {
 		const sink: Sink<HTMLContainerElement> = (node: HTMLContainerElement) => {
 			// TODO: performance, if we have a very large number of elements to move/change,
 			// detach the parent node from the DOM, remove children

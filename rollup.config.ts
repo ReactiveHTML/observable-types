@@ -7,6 +7,11 @@ import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
+const terserOptions = {
+  compress: {
+    drop_debugger: false,
+  },
+};
 
 const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf-8'));
 
@@ -68,7 +73,7 @@ export default [
         sourceMap: true,
         declarationDir: './dist/types',
       }),
-      terser(),
+      terser(terserOptions),
       // visualizer({ filename: 'bundle-stats.html' }),
     ],
     output: [

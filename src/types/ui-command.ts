@@ -15,7 +15,8 @@ export type UIOperation<I> =
 
 	| ['assign', I | I[]]
 
-	| ['delete', Pos[]]
+	| ['delete', Pos | Pos[]]
+	| ['deleteProperty', [I, Key]]
 	| ['replace', [Pos, I]]
 	| ['update', [Pos, Key, Value]] // if descendant elements update themselves, this is not needed, right?
 

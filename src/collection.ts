@@ -1,26 +1,27 @@
 import type { ArrayModificationMethod } from './types/array-meta';
 import type { ObservableItem } from './types/observable-item';
 import type { UIOperation } from './types/ui-command';
-import type { Observable } from 'rxjs';
+import type { Observable, Subscriber } from 'rxjs';
 
 import { BehaviorSubject, Subject } from 'rxjs';
 import { wrapxy } from './wrapxy';
-import { CollectionSink } from './collection-sink';
 
-export interface Collection<T> extends Array<T> {
-	assign: (newItems: T[]) => void;
+export type ICollection<T, R> = {
+	[idx: number]: T;
+	assign: (newItems: R[]) => void;
 	move: (src: number, dst: number, count?: number) => void;
 	observe: (prop: string) => Observable<any>;
+	sort: (fn: (a: T, b: T) => number) => void;
 	toArray: () => T[];
 	toWrappedArray: () => ObservableItem<T>[];
-};
+} & Array<R> & Observable<UIOperation<T>> & Subscriber<UIOperation<T>>;
 
 export const Collection = <R, I extends Object>
-	(initialValues = <R[]>[], ItemConstructor: (r: R) => I, CommandStream?: Observable<UIOperation<I>>) => {
+	(initialValues = <R[]>[], ItemConstructor: (r: R) => I, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
 		const toItem = (x: any) => typeof x != 'object' ? ItemConstructor(x) : x;
 
 		const _source = initialValues.map(ItemConstructor);
-		const topic2 = new Subject<UIOperation<I[]>>();
+		const topic2 = new Subject<UIOperation<I>>();
 		const topic = new BehaviorSubject<UIOperation<I>>(['assign', wrapxy<I>(_source, topic2, _source)]);
 		topic2.subscribe(topic);
 		const source = wrapxy<I[]>(_source, topic, _source);
@@ -32,21 +33,21 @@ export const Collection = <R, I extends Object>
 			return res;
 		};
 
-		// TODO: review and clean up
-		const tee2 = (prop: ArrayModificationMethod, ...args) => {
-			const res = _source[prop](...args);
-			topic.next(<UIOperation<I>>[prop, source[prop]]);
-			return res;
-		};
-
-		const pushFn = (...args: I[]) => {
+		const pushFn = (...args: R[]) => {
 			const newItems = args.map(toItem);
 			const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
 			_source.push(...newItems);
 			topic.next(<UIOperation<I>>['push', wrapped]);
 		};
 
-		const _m = new Map<string | number | symbol, any>([
+		const unshiftFn = (...args: R[]) => {
+			const newItems = args.map(toItem);
+			const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
+			_source.unshift(...newItems);
+			topic.next(<UIOperation<I>>['unshift', wrapped]);
+		};
+
+		const _m = new Map<UIOperation<I>[0], any>([
 			['_data', source],
 			// ['type', 'sink'], // Tell Rimmel we're a sink
 			// ['t', 'sink'], // Tell Rimmel we're a sink
@@ -54,15 +55,8 @@ export const Collection = <R, I extends Object>
 			['subscribe', topic.subscribe.bind(topic)],
 			['pipe', topic.pipe.bind(topic)],
 
-			...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k].bind(_source)]),
-			...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, tee.bind(_source, k)]),
-			...<UIOperation<I>[]>['unshift'].map(k => [k, tee2.bind(_source, k)]),
-
-			// ['unshift', (...args: I[]) => {
-			// 	const res = _source.unshift(...args);
-			// 	topic.next(<UIOperation<I>>['unshift', ...args.map(x => wrapxy<I>(x, topic, _source))]);
-			// 	return res;
-			// }],
+			...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k as keyof ArrayModificationMethod].bind(_source)]),
+			...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, tee.bind(_source, k as ('pop' | 'shift'))]),
 
 			['splice', (start: number, deleteCount: number, ...newValues: I[]) => {
 				const newItems = newValues.map(toItem);
@@ -73,13 +67,7 @@ export const Collection = <R, I extends Object>
 
 			['push', pushFn],
 			['next', pushFn], // So it can behave like an Observer
-
-			['unshift', (...args: I[]) => {
-				const newItems = args.map(toItem);
-				const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
-				_source.unshift(...newItems);
-				topic.next(['unshift', wrapped]);
-			}],
+			['unshift', unshiftFn],
 
 			['_forEach', _source.forEach.bind(_source)],
 
@@ -140,7 +128,7 @@ export const Collection = <R, I extends Object>
 			}],
 
 			// TODO:
-			// swap(src: number, dst: number, srcCount=1, dstCount=1)
+			// swap(src: number, dst: number)
 
 			// observe: (ch) => topic.pipe(...([].concat(
 			// 	ch ? filter(([channel]) => channel = ch) : [],
@@ -158,11 +146,11 @@ export const Collection = <R, I extends Object>
 		]);
 
 		CommandStream?.subscribe(([cmd, ...args]) => {
-			// we use the _m Map to protect against Prototype hijacking
+			// we use the _m as a Map to protect against Prototype hijacking
 			_m.get(cmd)(...args);
 		})
 
-		return <I[] & Collection<I> & Observable<I>>new Proxy(<I[]>_source, <ProxyHandler<I[]>>{
+		return new Proxy(<I[]>_source, <ProxyHandler<I[]>>{
 			deleteProperty: (target, prop: any) => {
 				if (isNaN(prop)) {
 					const r = delete target[prop];
@@ -174,12 +162,12 @@ export const Collection = <R, I extends Object>
 					topic.next(<UIOperation<I>>['splice', [idx, 1]]);
 				}
 			},
-			get(target, prop, caller) {
+			get(_target, prop, _caller) {
 				// FIXME: issues calling wrapxy(source[prop]) for prop = Symbol(Symbol.toPrimitive)
-				return _m.get(prop) ?? (
+				return _m.get(prop as UIOperation<I>[0]) ?? (
 					prop == 'length' ? _source.length :
 					prop == 'values' ? Object.values.bind(_source) :
-					source[prop]
+					source[prop as keyof typeof source]
 				);
 			},
 		});
