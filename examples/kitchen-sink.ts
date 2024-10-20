@@ -18,7 +18,7 @@ interface ItemType {
 const App = () => {
   const Item = (title: string): ItemType => ({
   	title,
-	rnd: Math.round(Math.random() *1000),
+	rnd: Math.round(Math.random() *899 +100),
 	get [Symbol.toStringTag]() { return `"${this.title}"` },
   });
   const initialValues = [...Array(10)].map((x, i)=>`Item ${i}`);

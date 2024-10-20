@@ -1,4 +1,4 @@
-import { filter, map, Subject } from 'rxjs';
+import { Subject, filter, map } from 'rxjs';
 import { rml, inputPipe, Value } from 'rimmel';
 
 export const EvalBox = (data: ICollection<ItemType, string>) => {
@@ -6,7 +6,13 @@ export const EvalBox = (data: ICollection<ItemType, string>) => {
   const OnEnter = inputPipe(filter((e: KeyboardEvent) => e.key == 'Enter'));
 
   const stream = new Subject<string>().pipe(
-    map((x) => eval(`${x}`)),
+    map((x) => {
+      try {
+        return eval(`${x}`);
+      } catch(e) {
+        return `Error: ${e.message}`;
+      }
+    }),
     map((x) => `<pre class="eval-result">${JSON.stringify(x, null, 2)}</pre>`),
   );
 
@@ -22,5 +28,4 @@ export const EvalBox = (data: ICollection<ItemType, string>) => {
     </fieldset>
   `;
 }
-
 
