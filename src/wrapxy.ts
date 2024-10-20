@@ -91,6 +91,5 @@ export const wrapxy = <I extends Object>(obj: I, topic: Subject<UIOperation<I>>,
 		},
 	});
 
-	Object.defineProperty(obj, Symbol.toStringTag, {value: '', enumerable: false, writable: false, configurable: false});
 	return p as ObservableItem<I>;
 };
