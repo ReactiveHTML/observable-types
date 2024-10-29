@@ -135,10 +135,11 @@ export const Collection = <R, I extends Object>
 			// 	//startWith(['assign', source]),
 			// ))),
 
-			['toJSON', () => JSON.stringify(_source)],
+			//['toJSON', () => JSON.stringify(_source)],
+			['toJSON', () => _source],
+			['toString', () => JSON.stringify(_source)],
 			['toArray', () => _source],
 			['toWrappedArray', () => _source.map(x => wrapxy<I>(x, topic, _source))],
-
 			[Symbol.toStringTag, _source[Symbol.toStringTag]],
 			[Symbol.iterator, _source[Symbol.iterator]],
 			[Symbol.asyncIterator, _source[Symbol.asyncIterator]],

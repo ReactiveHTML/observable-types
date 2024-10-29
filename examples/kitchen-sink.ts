@@ -1,4 +1,4 @@
-import type { ObservableItem } from '../src//types/observable-item';
+import type { ObservableItem } from '../src/types/observable-item';
 import { html, rml, Value, PrependHTML } from 'rimmel';
 
 import { Collection, ICollection } from '../src/collection';
