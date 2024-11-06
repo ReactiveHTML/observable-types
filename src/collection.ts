@@ -4,7 +4,8 @@ import type { UIOperation } from './types/ui-command';
 import type { Observable, Subscriber } from 'rxjs';
 
 import { BehaviorSubject, Subject } from 'rxjs';
-import { wrapxy } from './wrapxy';
+import { wrapxy } from './utils/wrapxy';
+import { maybeNew } from './utils/maybe-new';
 
 export type ICollection<T, R> = {
 	[idx: number]: T;
@@ -18,9 +19,9 @@ export type ICollection<T, R> = {
 
 export const Collection = <R, I extends Object>
 	(initialValues = <R[]>[], ItemConstructor: (r: R) => I, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
-		const toItem = (x: any) => typeof x != 'object' ? ItemConstructor(x) : x;
+		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
 
-		const _source = initialValues.map(ItemConstructor);
+		const _source = initialValues.map(v => maybeNew(ItemConstructor, v));
 		const topic2 = new Subject<UIOperation<I>>();
 		const topic = new BehaviorSubject<UIOperation<I>>(['assign', wrapxy<I>(_source, topic2, _source)]);
 		topic2.subscribe(topic);

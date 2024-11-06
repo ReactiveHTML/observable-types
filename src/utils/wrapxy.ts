@@ -1,5 +1,5 @@
-import { ObservableItem } from './types/observable-item';
-import type { UIOperation } from './types/ui-command';
+import { ObservableItem } from '../types/observable-item';
+import type { UIOperation } from '../types/ui-command';
 
 import { Subject, filter, map, startWith } from 'rxjs';
 
