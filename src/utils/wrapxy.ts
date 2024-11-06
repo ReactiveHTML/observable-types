@@ -10,6 +10,9 @@ const objectProxies = new WeakMap<Object, Subject<any>>();
  * An Observable Object Proxy
 **/
 export const wrapxy = <I extends Object>(obj: I, topic: Subject<UIOperation<I>>, container: I[]): ObservableItem<I> => {
+	if(typeof obj != 'object') {
+		return obj
+	}
 	let bs = objectProxies.get(obj);
 	if(!bs) {
 		bs = new Subject<[string, any]>();
@@ -60,7 +63,7 @@ export const wrapxy = <I extends Object>(obj: I, topic: Subject<UIOperation<I>>,
 						return stream;
 					}
 				});
-			} else if (prop == '_delete' || prop == SymbolDelete) { // FIXME: maybe use a symbol, or some other way to avoid collisions
+			} else if (prop == SymbolDelete) {
 				return () => {
 					// console.log('Wrapxy: _delete', target, prop, caller, obj);
 					// const idx = container.findIndex(x => obj == x);
@@ -91,5 +94,6 @@ export const wrapxy = <I extends Object>(obj: I, topic: Subject<UIOperation<I>>,
 		},
 	});
 
+	//Object.defineProperty(obj, Symbol.toStringTag, {value: `"${obj.title}"`, enumerable: false, writable: false, configurable: true});
 	return p as ObservableItem<I>;
 };

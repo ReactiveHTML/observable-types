@@ -1,24 +1,21 @@
 import type { ArrayModificationMethod } from './types/array-meta';
+import type { ICollection } from './types/icollection';
 import type { ObservableItem } from './types/observable-item';
 import type { UIOperation } from './types/ui-command';
 import type { Observable, Subscriber } from 'rxjs';
 
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, filter, map } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
 import { maybeNew } from './utils/maybe-new';
 
-export type ICollection<T, R> = {
-	[idx: number]: T;
-	assign: (newItems: R[]) => void;
-	move: (src: number, dst: number, count?: number) => void;
-	observe: (prop: string) => Observable<any>;
-	sort: (fn: (a: T, b: T) => number) => void;
-	toArray: () => T[];
-	toWrappedArray: () => ObservableItem<T>[];
-} & Array<R> & Observable<UIOperation<T>> & Subscriber<UIOperation<T>>;
+class Item {
+  constructor(public value: HTMLString) {
+    this[Symbol.toPrimitive] = function() { return this.value };
+  }
+}
 
 export const Collection = <R, I extends Object>
-	(initialValues = <R[]>[], ItemConstructor: (r: R) => I, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
+	(initialValues = <R[]>[], ItemConstructor: (r: R) => I = Item, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
 		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
 
 		const _source = initialValues.map(v => maybeNew(ItemConstructor, v));
@@ -54,6 +51,11 @@ export const Collection = <R, I extends Object>
 			// ['t', 'sink'], // Tell Rimmel we're a sink
 			// ['sink', node => CollectionSink(_m, i => `rendered> ${i}`)(node)],
 			['subscribe', topic.subscribe.bind(topic)],
+			// Observe data from specific actions (e.g.: additions, removals, moves...)
+			['observe', (action = 'push') => topic.pipe(
+				filter(([cmd]) => cmd==action),
+				map(data => data.length > 2 ? data.slice(1) : data[1]),
+			)],
 			['pipe', topic.pipe.bind(topic)],
 
 			...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k as keyof ArrayModificationMethod].bind(_source)]),

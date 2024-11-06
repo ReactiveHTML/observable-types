@@ -1,8 +1,8 @@
-import type { ObservableItem } from '../src/types/observable-item';
-import { html, rml, Value, PrependHTML } from 'rimmel';
+import type { ObservableItem } from '../../src/types/observable-item';
+import { rml, PrependHTML, Update, Value } from 'rimmel';
 
-import { Collection, ICollection } from '../src/collection';
-import { CollectionSink } from '../src/collection-sink';
+import { Collection, ICollection } from '../../src/collection';
+import { CollectionSink } from '../../src/collection-sink';
 import { scan } from 'rxjs';
 
 import { EvalBox } from './eval-box';
@@ -56,16 +56,13 @@ const App = () => {
     data[item].title = newValue;
   }
 
-  const ItemTemplate = (item: ObservableItem<ItemType>) => {
-    // const t2 = item.observe('title');
-    // console.log('PRINT', item);
-    return html`
-      <li>
-        <input class="value-box" value="${item.observable.title}" onchange="${[item, 'title']}">
-        (${item.rnd})
-        <button onclick="${item[DELETE]}">X</button>
-      </li>`
-  };
+  const ItemTemplate = (item: ObservableItem<ItemType>) => rml`
+    <li>
+      <input class="value-box" onchange="${Update(item, 'title')}" value="${item.observable.title}">
+      (${item.rnd})
+      <button onclick="${item[DELETE]}">X</button>
+    </li>`
+  ;
 
   const commandStream = data.pipe(
     scan((a, b) => `<pre>${b}</pre>`, '')
@@ -73,7 +70,7 @@ const App = () => {
 
   data.subscribe(x=>console.log(x));
 
-  return html`
+  return rml`
     <h2>Observable Collection</h2>
     <p>A proxied Array that maps every mutation operation (push, pop, shift, unshift, splice, sort, reverse) to efficient DOM update operations using the Observable/Observer interfaces</p>
 
@@ -103,7 +100,7 @@ const App = () => {
 
         <button onclick="${() => data.sort((a, b) => a.title < b.title ? -1 : 1)}">.sort</button>
 
-        <button onclick="${() => data.reverse()}">.reverse</button>
+        <button onclick="${data.reverse}">.reverse</button>
 
         ${EvalBox(data)}
 
@@ -125,5 +122,4 @@ const App = () => {
 };
 
 document.body.innerHTML = App();
-
 

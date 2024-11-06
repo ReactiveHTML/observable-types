@@ -9,12 +9,13 @@ import { ObservableItem } from './types/observable-item';
 import { Count, Pos } from './types/array-meta';
 import { FilterFunction } from './types/filter-function';
 
-// const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${function() { item.title = this.value }}"> (${item.rnd})</li>`;
-// const ItemTemplate = (item) => rml`<li><input value="${item.title}" onchange="${[item, 'title']}"> (${item.rnd}) <button onclick="${[item, undefined]}">X</button></li>`;
 type ItemTemplate<I> = (item: I, index: number, _?: any ) => HTMLString;
-// export const CollectionSink = <T extends HTMLContainerElement, CollectionType>(stream: CollectionType, template: ItemTemplate): Sink<T> => {
+
 export const CollectionSink: ExplicitSink<'content'> =
-	<I extends object>(stream: ICollection<I, any>, template: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation<I>> ) => {
+	<I extends object>(stream: ICollection<I, any>, template?: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation<I>> ) => {
+
+		const maybeTemplate = template ? (data) => template(data) : (data) => data;
+
 		const sink: Sink<HTMLContainerElement> = (node: HTMLContainerElement) => {
 			// TODO: performance, if we have a very large number of elements to move/change,
 			// detach the parent node from the DOM, remove children
@@ -32,13 +33,12 @@ export const CollectionSink: ExplicitSink<'content'> =
 				if(filterFn) {
 					v = v.filter(filterFn);
 				};
-				//node.innerHTML = v.map(x => template(wrapxy<I>(x, stream.topic, stream))).join('');
-				node.innerHTML = v.map(template).join('');
+				node.innerHTML = v.map(maybeTemplate).join('');
 			}
 
 			const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) => node.children[pos].innerHTML = str;
 
-			const replaceChildFn = ([pos, data]: [number, ObservableItem<I>]) => node.children[pos].outerHTML = template(data, pos);
+			const replaceChildFn = ([pos, data]: [number, ObservableItem<I>]) => node.children[pos].outerHTML = maybeTemplate(data, pos);
 
 			const shiftFn = () => node.firstElementChild?.remove();
 
@@ -60,7 +60,7 @@ export const CollectionSink: ExplicitSink<'content'> =
 			const spliceFn = (pos: number, deleteCount: number, newItems?: (ObservableItem<I> | ObservableItem<I>[])) => {
 				removeChildren(node, pos, deleteCount);
 				if((<ObservableItem<I>[]>newItems)?.length) {
-					const content = (<ObservableItem<I>[]>newItems).map(template).join('') as HTMLString;
+					const content = (<ObservableItem<I>[]>newItems).map(maybeTemplate).join('') as HTMLString;
 					if(pos < node.children.length) {
 						insert(node, pos, content);
 					} else {
@@ -93,11 +93,11 @@ export const CollectionSink: ExplicitSink<'content'> =
 					case ADD:
 					case PUSH:
 					case NEXT:
-						appendFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(template).join(''));
+						appendFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(maybeTemplate).join(''));
 						break;
 
 					case UNSHIFT:
-						prependFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(template).join(''));
+						prependFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(maybeTemplate).join(''));
 						break;
 
 					case SPLICE:
@@ -125,7 +125,7 @@ export const CollectionSink: ExplicitSink<'content'> =
 						break;
 
 					case UPDATE:
-						//updateChildFn([args[0], args[1], template(args[1])]);
+						//updateChildFn([args[0], args[1], maybeTemplate(args[1])]);
 						break;
 
 					case MOVE:
@@ -147,7 +147,7 @@ export const CollectionSink: ExplicitSink<'content'> =
 			source: stream,
 			sink,
 			// TODO: do we need to emit an initial value through a dedicated channel to render it synchronously?
-			// initial: stream.map(i => template(wrapxy<I>(i, stream.topic, stream))).join(''),
+			// initial: stream.map(i => maybeTemplate(wrapxy<I>(i, stream.topic, stream))).join(''),
 		}
 	};
 

@@ -1,5 +1,5 @@
 # ObservableTypes
-A collection of TypeScript/JavaScript utilities designed to render structured data collections (e.g.: Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM.
+A collection of TypeScript/JavaScript utilities designed to render simple or structured data collections (e.g.: Arrays of strings or Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM and minimal boilerplate.
 
 With these you can create reactive collections and manage operations on them in either an imperative or functional style.
 
@@ -48,15 +48,10 @@ const Item = (value: string | number) =>
 const myList = Collection([1, 2, 3], Item);
 
 
-// Create a stream of "unshift" operations
-// `data` is an Observable, so can be
-// piped and subscribed
-const insertions = data.pipe(
-
-  filter(([ cmd ]) => cmd=='unshift'),
-  map(([ , data ]) => data),
-
-);
+// Create a stream of "unshift" operations.
+// `data` is Observable, so it can be
+// piped and subscribed to.
+const insertions = data.observe('unshift');
 
 // Do something when items are inserted
 insertions.subscribe((e) => {
