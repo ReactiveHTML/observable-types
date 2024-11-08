@@ -35,19 +35,6 @@ const es: OutputOptions = {
   format: 'es',
 };
 
-const globalVar: OutputOptions = {
-  ...cjs,
-  dir: './dist-global',
-  entryFileNames: '[name].js',
-  freeze: true,
-  generatedCode: 'es2015',
-  sourcemap: true,
-  format: 'esm',
-  globals: {
-    'rml': 'rimmel',
-  }
-};
-
 const preserveModules = {
   dir: './dist/modules',
   preserveModules: true,
