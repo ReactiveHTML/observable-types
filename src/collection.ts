@@ -78,8 +78,7 @@ export const Collection = <R, I extends Object>
 				_source
 					.map(x => wrapxy<I>(x, topic, _source))
 					.forEach(fn)
-				}
-			],
+			}],
 			// findIndex: source.findIndex.bind(source),
 
 			['sort', (fn: (a: I, b: I) => number) => {
