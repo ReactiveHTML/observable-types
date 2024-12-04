@@ -4,5 +4,8 @@ export type ObservableItem<T> = T & {
 	observable: {
 		[K in keyof T]: Observable<T[K]>
 	};
+	observer: {
+		[K in keyof T]: Observable<T[K]>
+	};
 	[Symbol.for('delete')]: () => void;
 }

@@ -1,20 +1,24 @@
-import type { ExplicitSink, HTMLContainerElement, HTMLString, Sink, SinkBindingConfiguration } from 'rimmel';
-import { Observable } from 'rxjs';
-import type { ICollection } from './collection';
+import type { ICollection } from './types/icollection';
 import type { UIOperation } from './types/ui-command';
+import type { Count, Pos } from './types/array-meta';
+import type { FilterFunction } from './types/filter-function';
+import type { ObservableItem } from './types/observable-item';
+import type { ExplicitSink, HTMLContainerElement, HTMLString, Sink, SinkBindingConfiguration } from 'rimmel';
+import type { Observable } from 'rxjs';
 
 import { ADD, ASSIGN, MOVE, NEXT, POP, PUSH, REPLACE, REVERSE, SET_FILTER, SHIFT, SORT, SPLICE, UNSHIFT, UPDATE } from './constants';
 import { SINK_TAG } from 'rimmel';
-import { ObservableItem } from './types/observable-item';
-import { Count, Pos } from './types/array-meta';
-import { FilterFunction } from './types/filter-function';
 
-type ItemTemplate<I> = (item: I, index: number, _?: any ) => HTMLString;
+type ItemTemplate<I> = (item: ObservableItem<I> | HTMLString, pos: number, array: (ObservableItem<I> | HTMLString)[]) => HTMLString;
 
 export const CollectionSink: ExplicitSink<'content'> =
-	<I extends object>(stream: ICollection<I, any>, template?: ItemTemplate<ObservableItem<I>>, inputStream?: Observable<UIOperation<I>> ) => {
+	<I extends object>
+	(stream: ICollection<I, any>, template?: ItemTemplate<I>, inputStream?: Observable<UIOperation<I>> ) => {
 
-		const maybeTemplate = template ? (data) => template(data) : (data) => data;
+		const maybeTemplate = template
+			? (data: ObservableItem<I>, pos: number, array: ObservableItem<I>[]): HTMLString => template(data, pos, array)
+			: (data: HTMLString, pos: number, array: HTMLString[]): HTMLString => data
+		;
 
 		const sink: Sink<HTMLContainerElement> = (node: HTMLContainerElement) => {
 			// TODO: performance, if we have a very large number of elements to move/change,
@@ -36,17 +40,21 @@ export const CollectionSink: ExplicitSink<'content'> =
 				node.innerHTML = v.map(maybeTemplate).join('');
 			}
 
-			const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) => node.children[pos].innerHTML = str;
+			const updateChildFn = ([pos, key, str]: [number, string, HTMLString]) =>
+				node.children[pos].innerHTML = str;
 
-			const replaceChildFn = ([pos, data]: [number, ObservableItem<I>]) => node.children[pos].outerHTML = maybeTemplate(data, pos);
+			const replaceChildFn = ([pos, data]: [number, ObservableItem<I>]) =>
+				node.children[pos].outerHTML = maybeTemplate(data, pos, stream);
 
-			const shiftFn = () => node.firstElementChild?.remove();
+			const shiftFn = () =>
+				node.firstElementChild?.remove();
 
-			const popFn = () => node.lastElementChild?.remove();
+			const popFn = () =>
+				node.lastElementChild?.remove();
 
 			const removeChildren = (node: HTMLElement, pos: number, count: number) => {
 				for(var i=0;i<count;i++)
-				node.removeChild(node.children[pos]);
+					node.removeChild(node.children[pos]);
 			};
 
 			const insert = (node: HTMLElement, pos: number, html: HTMLString) => {
@@ -100,6 +108,10 @@ export const CollectionSink: ExplicitSink<'content'> =
 						prependFn(([] as ObservableItem<I>[]).concat(<ObservableItem<I>[]>args).map(maybeTemplate).join(''));
 						break;
 
+					// case COPY_WITHIN:
+					// case FILL:
+					// TODO: ...
+
 					case SPLICE:
 						spliceFn(...args as [Pos, Count, (ObservableItem<I> | ObservableItem<I>[])?]);
 						break;
@@ -133,7 +145,6 @@ export const CollectionSink: ExplicitSink<'content'> =
 						break;
 
 					// case 'refresh':
-					// case 'filter2 ?':
 				};
 			};
 
@@ -141,13 +152,13 @@ export const CollectionSink: ExplicitSink<'content'> =
 			return handler;
 		};
 
-		return <SinkBindingConfiguration<Element>>{
+		return <SinkBindingConfiguration<HTMLContainerElement>>{
 			type: SINK_TAG,
 			t: 'Collection',
 			source: stream,
 			sink,
 			// TODO: do we need to emit an initial value through a dedicated channel to render it synchronously?
-			// initial: stream.map(i => maybeTemplate(wrapxy<I>(i, stream.topic, stream))).join(''),
+			//value: stream._data.map(maybeTemplate).join('')
 		}
 	};
 

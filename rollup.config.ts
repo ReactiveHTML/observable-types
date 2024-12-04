@@ -15,7 +15,7 @@ const terserOptions = {
 
 const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf-8'));
 
-const peerDependencies = Object.keys(pkg.peerDependencies || {});
+const peerDependencies = Object.keys(pkg.peerDependencies ?? []);
 
 const cjs: OutputOptions = {
   dir: './dist',

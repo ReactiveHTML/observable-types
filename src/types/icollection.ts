@@ -1,3 +1,5 @@
+import type { UIOperation } from './ui-command';
+
 export type ICollection<T, R> = {
 	[idx: number]: T;
 	assign: (newItems: R[]) => void;

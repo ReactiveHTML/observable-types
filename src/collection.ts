@@ -1,26 +1,34 @@
 import type { ArrayModificationMethod } from './types/array-meta';
 import type { ICollection } from './types/icollection';
-import type { ObservableItem } from './types/observable-item';
 import type { UIOperation } from './types/ui-command';
-import type { Observable, Subscriber } from 'rxjs';
+import type { Observable } from 'rxjs';
 
 import { BehaviorSubject, Subject, filter, map } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
 import { maybeNew } from './utils/maybe-new';
+import { CollectionSink } from './collection-sink';
 
-class Item {
-  constructor(public value: HTMLString) {
-    this[Symbol.toPrimitive] = function() { return this.value };
-  }
-}
+class Item<T> {
+	[Symbol.toPrimitive]: () => T;
+	constructor(public value: T) {
+		this[Symbol.toPrimitive] = () => this.value;
+	}
+};
+
+type ItemConstructorType<R> =
+	| ((r: R) => Record<string, R>)
+	| (new (r: R) => R)
+	| R
+;
 
 export const Collection = <R, I extends Object>
-	(initialValues = <R[]>[], ItemConstructor: (r: R) => I = Item, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
+	(initialValues = <R[]>[], ItemConstructor: ItemConstructorType<R> = Item<R>, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
 		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
 
-		const _source = initialValues.map(v => maybeNew(ItemConstructor, v));
+		const _source: I[] = initialValues.map(v => maybeNew(ItemConstructor, v));
 		const topic2 = new Subject<UIOperation<I>>();
-		const topic = new BehaviorSubject<UIOperation<I>>(['assign', wrapxy<I>(_source, topic2, _source)]);
+		//const topic = new BehaviorSubject<UIOperation<I>>(<UIOperation<I>>['assign', wrapxy<I>(_source, topic2, _source)]);
+		const topic = new Subject<UIOperation<I>>();
 		topic2.subscribe(topic);
 		const source = wrapxy<I[]>(_source, topic, _source);
 
@@ -47,19 +55,22 @@ export const Collection = <R, I extends Object>
 
 		const _m = new Map<UIOperation<I>[0], any>([
 			['_data', source],
-			// ['type', 'sink'], // Tell Rimmel we're a sink
-			// ['t', 'sink'], // Tell Rimmel we're a sink
-			// ['sink', node => CollectionSink(_m, i => `rendered> ${i}`)(node)],
+
 			['subscribe', topic.subscribe.bind(topic)],
 			// Observe data from specific actions (e.g.: additions, removals, moves...)
 			['observe', (action = 'push') => topic.pipe(
 				filter(([cmd]) => cmd==action),
 				map(data => data.length > 2 ? data.slice(1) : data[1]),
 			)],
+
 			['pipe', topic.pipe.bind(topic)],
 
-			...<[string ,any]>(['map', 'reduce', 'filter', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k as keyof ArrayModificationMethod].bind(_source)]),
+			...<[string ,any]>(['map', 'reduce', 'join', 'slice', 'some', 'every', 'indexOf']).map(k => [k, _source[k as keyof ArrayModificationMethod].bind(_source)]),
 			...<UIOperation<I>[]>['pop', 'shift'].map(k => [k, () => tee(k as ('pop' | 'shift'))]),
+
+			// TODO:
+			// copyWithin
+			// fill
 
 			['splice', (start: number, deleteCount: number, ...newValues: I[]) => {
 				const newItems = newValues.map(toItem);
@@ -72,8 +83,13 @@ export const Collection = <R, I extends Object>
 			['next', pushFn], // So it can behave like an Observer
 			['unshift', unshiftFn],
 
-			['_forEach', _source.forEach.bind(_source)],
+			['filter', (fn: (item: I) => void) =>
+				_source
+					.map(x => wrapxy<I>(x, topic, _source))
+					.filter(fn)
+			],
 
+			['_forEach', _source.forEach.bind(_source)],
 			['forEach', (fn: (item: I) => void) => {
 				_source
 					.map(x => wrapxy<I>(x, topic, _source))
@@ -94,18 +110,8 @@ export const Collection = <R, I extends Object>
 				return source;
 			}],
 
-			// filter2: (fn: (data: unknown) => boolean) => {
-			// 	topic.next(['filter2', [fn, source]])
-			// 	return source
-			// },
-
-			// refresh: item => {
-			// 	topic.next(['refresh', data.indexOf(item)])
-			// 	return source
-			// },
-
 			['assign', (newItems: I[]) => {
-				//source = newItems // don't do, as the other functions hold a reference to the array
+				//source = newItems // reminder not to do this, 'cause the other functions hold a reference to the array
 				_source.splice(0, Infinity, ...newItems);
 				topic.next(['assign', newItems.map(x => wrapxy<I>(x, topic, _source))]);
 				return source;
@@ -132,11 +138,6 @@ export const Collection = <R, I extends Object>
 			// TODO:
 			// swap(src: number, dst: number)
 
-			// observe: (ch) => topic.pipe(...([].concat(
-			// 	ch ? filter(([channel]) => channel = ch) : [],
-			// 	//startWith(['assign', source]),
-			// ))),
-
 			//['toJSON', () => JSON.stringify(_source)],
 			['toJSON', () => _source],
 			['toString', () => JSON.stringify(_source)],
@@ -146,6 +147,11 @@ export const Collection = <R, I extends Object>
 			[Symbol.iterator, _source[Symbol.iterator]],
 			[Symbol.asyncIterator, _source[Symbol.asyncIterator]],
 			[Symbol.toPrimitive, _source[Symbol.toPrimitive]],
+
+			// WIP. experimental
+			// Tell Rimmel we're a sink, too
+			['type', 'sink'],
+			['t', 'Collection'],
 		]);
 
 		CommandStream?.subscribe(([cmd, ...args]) => {
@@ -170,6 +176,7 @@ export const Collection = <R, I extends Object>
 				return _m.get(prop as UIOperation<I>[0]) ?? (
 					prop == 'length' ? _source.length :
 					prop == 'values' ? Object.values.bind(_source) :
+					prop == 'sink' ? new CollectionSink(_m) :
 					source[prop as keyof typeof source]
 				);
 			},
