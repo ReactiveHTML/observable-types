@@ -1,3 +1,5 @@
+![ObservableTypes](./logo.webp)
+
 # ObservableTypes
 A collection of TypeScript/JavaScript utilities designed to render simple or structured data collections (e.g.: Arrays of strings or Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM and minimal boilerplate.
 
