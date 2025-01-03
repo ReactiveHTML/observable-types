@@ -71,7 +71,7 @@ export const wrapxy =
 					return new Proxy(obj, {
 						// TODO: cache the proxy for repeated access to multiple properties
 						get(target, prop, proxy) {
-							return (v: as keyof I) => target[prop] = v;
+							return (v: keyof I) => target[prop] = v;
 						}
 					});
 				} else if (prop == SymbolDelete) {
