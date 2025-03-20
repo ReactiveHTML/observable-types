@@ -9,11 +9,6 @@ const reset = new Subject().pipe(
   map(() => '')
 );
 
-const xxx = (...args) => {
-	console.log(args)
-	data.next(...args)
-}
-
 document.body.innerHTML = rml`
   <h1>Sortable List</h1>
   <ul ...${Sortable({onOrderChange: data.move})}>
