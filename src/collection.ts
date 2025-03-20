@@ -1,7 +1,7 @@
 import type { ArrayModificationMethod } from './types/array-meta';
 import type { ICollection } from './types/icollection';
 import type { UIOperation } from './types/ui-command';
-import type { Observable } from 'rxjs';
+import type { Observable, share } from 'rxjs';
 
 import { BehaviorSubject, Subject, filter, map } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
@@ -17,7 +17,7 @@ class Item<T> {
 
 type ItemConstructorType<R> =
 	| ((r: R) => Record<string, R>)
-	| (new (r: R) => R)
+	| (new (r: R) => Item<R>)
 	| R
 ;
 
@@ -26,10 +26,8 @@ export const Collection = <R, I extends Object>
 		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
 
 		const _source: I[] = initialValues.map(v => maybeNew(ItemConstructor, v));
-		const topic2 = new Subject<UIOperation<I>>();
 		//const topic = new BehaviorSubject<UIOperation<I>>(<UIOperation<I>>['assign', wrapxy<I>(_source, topic2, _source)]);
 		const topic = new Subject<UIOperation<I>>();
-		topic2.subscribe(topic);
 		const source = wrapxy<I[]>(_source, topic, _source);
 
 		// TODO: review and clean up
@@ -44,6 +42,7 @@ export const Collection = <R, I extends Object>
 			const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
 			_source.push(...newItems);
 			topic.next(<UIOperation<I>>['push', wrapped]);
+			return _source.length; // compat with Array.push
 		};
 
 		const unshiftFn = (...args: R[]) => {
@@ -51,6 +50,7 @@ export const Collection = <R, I extends Object>
 			const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
 			_source.unshift(...newItems);
 			topic.next(<UIOperation<I>>['unshift', wrapped]);
+			return _source.length; // compat with Array.unshift
 		};
 
 		const _m = new Map<UIOperation<I>[0], any>([
@@ -61,6 +61,7 @@ export const Collection = <R, I extends Object>
 			['observe', (action = 'push') => topic.pipe(
 				filter(([cmd]) => cmd==action),
 				map(data => data.length > 2 ? data.slice(1) : data[1]),
+				share(),
 			)],
 
 			['pipe', topic.pipe.bind(topic)],
@@ -149,15 +150,15 @@ export const Collection = <R, I extends Object>
 			[Symbol.toPrimitive, _source[Symbol.toPrimitive]],
 
 			// WIP. experimental
-			// Tell Rimmel we're a sink, too
+			// Tell Rimmel we're a sink
 			['type', 'sink'],
 			['t', 'Collection'],
+			[Symbol.for('rml:sink'), () => new CollectionSink(_m)],
 		]);
 
-		CommandStream?.subscribe(([cmd, ...args]) => {
-			// we use the _m as a Map to protect against Prototype hijacking
-			_m.get(cmd)(...args);
-		})
+		CommandStream?.subscribe(([cmd, ...args]) =>
+			_m.get(cmd)(...args)
+		);
 
 		return new Proxy(<I[]>_source, <ProxyHandler<I[]>>{
 			deleteProperty: (target, prop: any) => {
