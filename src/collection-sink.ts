@@ -158,7 +158,6 @@ export const CollectionSink: ExplicitSink<'content'> =
 			source: stream,
 			sink,
 			// TODO: do we need to emit an initial value through a dedicated channel to render it synchronously?
-			//value: stream._data.map(maybeTemplate).join('')
+			value: stream._data.map(maybeTemplate).join('')
 		}
 	};
-
