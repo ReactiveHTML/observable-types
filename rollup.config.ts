@@ -44,8 +44,6 @@ export default [
   {
     external: [
       ...peerDependencies,
-      'rimmel',
-      'rxjs',
     ],
     input: './src/index.ts',
     treeshake: {
@@ -86,8 +84,6 @@ export default [
   //   output: [ cjs, es ],
   //   external: [
   //     ...peerDependencies,
-  //     'rimmel',
-  //     'rxjs',
   //   ]
   // },
   // {
@@ -116,8 +112,6 @@ export default [
   //   ],
   //   external: [
   //     ...peerDependencies,
-  //     'rimmel',
-  //     'rxjs',
   //   ]
   // },
 ] as RollupOptions[];
