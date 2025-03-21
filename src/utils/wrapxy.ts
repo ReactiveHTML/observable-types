@@ -66,7 +66,13 @@ export const wrapxy =
 							return stream;
 						}
 					});
+				} else if (prop == 'next') {
+					return (mergeable: keyof I) =>
+						Object.entries(mergeable)
+							.forEach(([k, v]) => obj[k] = v)
+						// Object.target[prop] = v;
 				} else if (prop == 'observer') {
+					// TODO: do we want this?
 					// .observable.prop
 					return new Proxy(obj, {
 						// TODO: cache the proxy for repeated access to multiple properties
