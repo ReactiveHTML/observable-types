@@ -38,7 +38,7 @@
   },
   "peerDependencies": {
     "rxjs": ">=5.5.0 || >=6.0.0 || >=7.8.1",
-    "rimmel": "^1.2.2"
+    "rimmel": "^1.4.0"
   },
   "license": "MIT"
 }
