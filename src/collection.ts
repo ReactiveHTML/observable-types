@@ -1,9 +1,9 @@
 import type { ArrayModificationMethod } from './types/array-meta';
 import type { ICollection } from './types/icollection';
 import type { UIOperation } from './types/ui-command';
-import type { Observable, share } from 'rxjs';
+import type { Observable } from 'rxjs';
 
-import { BehaviorSubject, Subject, filter, map } from 'rxjs';
+import { BehaviorSubject, Subject, filter, map, share } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
 import { maybeNew } from './utils/maybe-new';
 import { CollectionSink } from './collection-sink';
@@ -26,8 +26,9 @@ export const Collection = <R, I extends Object>
 		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
 
 		const _source: I[] = initialValues.map(v => maybeNew(ItemConstructor, v));
-		//const topic = new BehaviorSubject<UIOperation<I>>(<UIOperation<I>>['assign', wrapxy<I>(_source, topic2, _source)]);
-		const topic = new Subject<UIOperation<I>>();
+		const topic = new BehaviorSubject<UIOperation<I>>();
+		topic.next(['assign', wrapxy<I>(_source, topic, _source)] as UIOperation<I>);
+		//const topic = new Subject<UIOperation<I>>();
 		const source = wrapxy<I[]>(_source, topic, _source);
 
 		// TODO: review and clean up
