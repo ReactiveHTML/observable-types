@@ -49,7 +49,6 @@ export const wrapxy =
 						}
 					}
 				} else if (prop == 'subscribe') {
-					debugger;
 					return topic.subscribe.bind(topic);
 				} else if (prop == 'observable') {
 					// .observable.prop
