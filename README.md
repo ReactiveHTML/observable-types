@@ -1,11 +1,11 @@
 ![ObservableTypes](./logo.webp)
 
-# ObservableTypes
-A collection of TypeScript/JavaScript utilities designed to render simple or structured data collections (e.g.: Arrays of strings or Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM and minimal boilerplate.
+# Observable Types
+Reactive, Rendering-aware JavaScript primitives for data collections (e.g.: Arrays of strings or Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM and zero boilerplate.
 
-With these you can create reactive collections and manage operations on them in either an imperative or functional style.
+With these you can create reactive collections and manage operations on them in either an imperative or streams-oriented style.
 
-This library has reactive bindings exposed through the Observable/Observer interfaces (e.g.: RxJS) and integrates seamlessly with Observable UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel) which have first-class support for them.
+Reactive bindings are exposed through the Observable and Observer interfaces (e.g.: RxJS) and integrates seamlessly with streams-oriented UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel).
 
 ## Features
 ObservableTypes expose both the Observable and the Observer interfaces (like the Rx.Subject), which makes them suitable for piping, streaming and merging with other reactive event streams.
@@ -86,14 +86,46 @@ All you need is the collection and a template to use for rendering new items.
 
 Observable Types best shine when used with an Observable-aware UI library such as [Rimmel](https://github.com/reactivehtml/rimmel), in which connecting an observable stream to the DOM is as trivial as putting it in the template:
 
-#### Example 1 (with Rimmel templates)
+## A Basic Example (with Rimmel.js)
+```typescript
+import { Collection, HTMLList } from 'observable-types';
+import { rml, Cut } from 'rimmel';
+
+const items = Collection(['foo', 'bar', 'baz']);
+
+document.body.innerHTML = rml`
+  <h1>List</h1>
+  <ul>
+    ${HTMLList(items)}
+  </ul>
+
+  Add new stuff: <input onchange="${Cut(items)}">
+`;
+```
+[Run on StackBlitz](https://stackblitz.com/edit/observable-types-basics)
+
+In addition to the above, when you need to customise various aspects of your collection or the rendering, you can use item constructors and templates for your items as in the following example:
+
+## Customisations (with Rimmel.js)
+Item Constructors can be used to conveniently construct valid Items from primitive values (like a string or a number) and be used automatically in the collection whenever a new item is added.
+
+Custom views can also be used to render each item exactly as required.
+
 ```typescript
 import { Collection, CollectionSink } from 'observable-types';
-import { rml, Value } from 'rimmel';
+import { rml, Cut } from 'rimmel';
 
+// A factory function for items
 const Item = (title) => ({ title });
+
+// The template used to render each
 const ItemTemplate = item => `<li>${item.title}</li>`;
+
+// The actual collection
 const list = Collection([], Item);
+
+// A view connected to the list.
+// There can be multiple views on the same page
 const listView = CollectionSink(list, ItemTemplate);
 
 document.body.innerHTML = rml`
@@ -102,14 +134,60 @@ document.body.innerHTML = rml`
     ${listView}
   </ul>
 
-  <input placeholder="new stuff" onchange="${Value(items)}">Add</button>
+  Add new stuff: <input onchange="${Cut(items)}">
 `;
 ```
-[Run on StackBlitz](https://stackblitz.com/edit/observable-types-no-framework)
 
+## Reactive views
+Item templates can enjoy the full reactive power of Rimmel.js and update the view whenever the underlying object changes.
 
+```typescript
+import { Collection, CollectionSink } from 'observable-types';
+import { rml, Cut } from 'rimmel';
+
+const Item = (title) => ({ title });
+
+const ItemTemplate = item => rml`
+  <li><input value="${item.observable.title}" onchange="${item.observable.title}"></li>
+`;
+
+const list = Collection([], Item);
+
+document.body.innerHTML = rml`
+  <h1>List</h1>
+  <ul>
+    ${CollectionSink(list, ItemTemplate)}
+  </ul>
+
+  Add new stuff: <input onchange="${Cut(list)}">
+`;
+```
+
+## Convenience
+Every method of a Collection can be used directly in your event handlers to dictate the exact behaviour in a point-free style:
+
+```typescript
+import { Collection, HTMLList } from 'observable-types';
+import { rml, Cut } from 'rimmel';
+
+const items = Collection(['foo', 'bar', 'baz']);
+
+document.body.innerHTML = rml`
+  <h1>List</h1>
+  <ul>
+    ${HTMLList(items)}
+  </ul>
+
+  Prepend new stuff: <input onchange="${Cut(items.unshift)}">
+  Append new stuff: <input onchange="${Cut(items.push)}">
+  <button onclick="${items.shift}">Remove first</button>
+  <button onclick="${items.pop}">Remove last</button>
+`;
+```
+
+## Vanilla JS
 It's not mandatory to use any UI library, though. In fact, you can also live without and imperatively sink an Observable Collection down the DOM by passing it a target node.
-#### Example 2 (with no UI library):
+
 ```typescript
 import type { ObservableItem } from 'observable-types';
 import { Collection, CollectionSink } from 'observable-types';
@@ -136,22 +214,15 @@ setTimeout(() => items.shift(), 4000);
 
 [Run on StackBlitz](https://stackblitz.com/edit/observable-types-no-framework)
 
-### Playground
+## Playground
 Check out the following [Kitchen Sink Application](https://stackblitz.com/edit/observable-types-kitchen-sink) where you can play and experiment with the whole feature set
 
 ## Contributing
 Contributions are welcome! Please feel free to open issues or submit pull requests.
 
-
 ## Development Setup
-Clone the repository.
-
-Install dependencies:
-
 ```bash
-# Copy code
 npm install
-npm test
 vite
 ```
 
