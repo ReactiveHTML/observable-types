@@ -1,8 +1,10 @@
+import { ItemConstructorType } from "../types/item-constructor";
+
 type Fn<T> = (...args: any[]) => T;
 
 export const maybeNew =
 	<T>
-	(Item: T | Fn<T>, ...args: any) => {
+	(Item: T | ItemConstructorType<T> | Fn<T>, ...args: any) => {
 		if(args.length == 1 && typeof args[0] == 'object') {
 			return args[0]
 		} else {

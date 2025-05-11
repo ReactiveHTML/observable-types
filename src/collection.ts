@@ -7,6 +7,7 @@ import { BehaviorSubject, Subject, filter, map, share } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
 import { maybeNew } from './utils/maybe-new';
 import { CollectionSink } from './collection-sink';
+import { HTMLList } from './html-list';
 
 class Item<T> {
 	[Symbol.toPrimitive]: () => T;
@@ -14,12 +15,6 @@ class Item<T> {
 		this[Symbol.toPrimitive] = () => this.value;
 	}
 };
-
-type ItemConstructorType<R> =
-	| ((r: R) => Record<string, R>)
-	| (new (r: R) => Item<R>)
-	| R
-;
 
 export const Collection = <R, I extends Object>
 	(initialValues = <R[]>[], ItemConstructor: ItemConstructorType<R> = Item<R>, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
