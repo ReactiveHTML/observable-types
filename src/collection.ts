@@ -53,6 +53,7 @@ export const Collection = <R, I extends Object>
 			['_data', source],
 
 			['subscribe', topic.subscribe.bind(topic)],
+			['changes', topic.asObservable()],
 			// Observe data from specific actions (e.g.: additions, removals, moves...)
 			['observe', (action = 'push') => topic.pipe(
 				filter(([cmd]) => cmd==action),
@@ -148,8 +149,9 @@ export const Collection = <R, I extends Object>
 			// WIP. experimental
 			// Tell Rimmel we're a sink
 			['type', 'sink'],
+			['sink', () => new CollectionSink(_m, HTMLList)],
 			['t', 'Collection'],
-			[Symbol.for('rml:sink'), () => new CollectionSink(_m)],
+			[Symbol.for('rml:sink'), () => new CollectionSink(_m, HTMLList)],
 		]);
 
 		CommandStream?.subscribe(([cmd, ...args]) =>
