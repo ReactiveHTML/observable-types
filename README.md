@@ -1,4 +1,4 @@
-![ObservableTypes](./logo.webp)
+![ObservableTypes](./observable-types.png)
 
 # Observable Types
 Reactive, Rendering-aware JavaScript primitives for data collections (e.g.: Arrays of strings or Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM and zero boilerplate.
