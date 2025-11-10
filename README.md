@@ -3,9 +3,9 @@
 # Observable Types
 Reactive, Rendering-aware JavaScript primitives for data collections (e.g.: Arrays of strings or Arrays of Objects) in the DOM and manage all sorts of updates in an efficient manner without using a Virtual DOM and zero boilerplate.
 
-With these you can create reactive collections and manage operations on them in either an imperative or streams-oriented style.
+With these you can create reactive collections and manage operations on them in either an imperative or stream-oriented style.
 
-Reactive bindings are exposed through the Observable and Observer interfaces (e.g.: RxJS) and integrates seamlessly with streams-oriented UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel).
+Reactive bindings are exposed through the Observable and Observer interfaces (e.g.: RxJS) and integrates seamlessly with stream-oriented UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel).
 
 ## Features
 ObservableTypes expose both the Observable and the Observer interfaces (like the Rx.Subject), which makes them suitable for piping, streaming and merging with other reactive event streams.
