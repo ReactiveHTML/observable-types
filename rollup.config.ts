@@ -17,22 +17,16 @@ const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf-8'));
 
 const peerDependencies = Object.keys(pkg.peerDependencies ?? []);
 
-const cjs: OutputOptions = {
+const es: OutputOptions = {
   dir: './dist',
-  entryFileNames: '[name].cjs',
+  entryFileNames: '[name].mjs',
   exports: 'named',
   externalLiveBindings: false,
-  format: 'cjs',
+  format: 'es',
   freeze: false,
   // generatedCode: 'es6',
   // interop: 'default',
   sourcemap: true,
-}
-
-const es: OutputOptions = {
-  ...cjs,
-  entryFileNames: '[name].mjs',
-  format: 'es',
 };
 
 const preserveModules = {
@@ -62,7 +56,6 @@ export default [
       // visualizer({ filename: 'bundle-stats.html' }),
     ],
     output: [
-      cjs,
       es,
     ],
   },
