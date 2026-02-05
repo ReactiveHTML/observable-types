@@ -1,4 +1,4 @@
-import { CollectionSink } from './collection-sink';
+import { CollectionSink } from '../collection-sink';
 
 const Template = item => `<li draggable="true">${item}</li>`;
 

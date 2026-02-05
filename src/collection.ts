@@ -7,7 +7,7 @@ import { BehaviorSubject, Subject, filter, map, share } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
 import { maybeNew } from './utils/maybe-new';
 import { CollectionSink } from './collection-sink';
-import { HTMLList } from './html-list';
+import { HTMLList } from './templates/html-list';
 
 class Item<T> {
 	[Symbol.toPrimitive]: () => T;

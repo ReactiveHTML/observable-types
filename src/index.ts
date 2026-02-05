@@ -5,6 +5,6 @@ export type { ObservableItem } from './types/observable-item';
 export { Collect } from './utils/collect';
 export { Collection } from './collection';
 export { CollectionSink } from './collection-sink';
-export { HTMLList } from './html-list';
+export { HTMLList } from './templates/html-list';
 
 export * from './constants';
