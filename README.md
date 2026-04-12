@@ -218,7 +218,8 @@ setTimeout(() => items.shift(), 4000);
 Check out the following [Kitchen Sink Application](https://stackblitz.com/edit/observable-types-kitchen-sink) where you can play and experiment with the whole feature set
 
 ## Contributing
-Contributions are welcome! Please feel free to open issues or submit pull requests.
+Contributions are welcome!<br>
+Feel free to open issues, pull requests, mention ObservableTypes in your articles, threads, talks, books, etc.
 
 ## Development Setup
 ```bash
