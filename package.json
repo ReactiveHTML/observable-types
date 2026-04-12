@@ -1,6 +1,6 @@
 {
   "name": "observable-types",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
