@@ -3,11 +3,13 @@ import type { ICollection } from './types/icollection';
 import type { UIOperation } from './types/ui-command';
 import type { Observable } from 'rxjs';
 
-import { BehaviorSubject, Subject, filter, map, share } from 'rxjs';
+import { ReplaySubject, filter, map, share } from 'rxjs';
 import { wrapxy } from './utils/wrapxy';
 import { maybeNew } from './utils/maybe-new';
 import { CollectionSink } from './collection-sink';
 import { HTMLList } from './templates/html-list';
+import { ASSIGN, MOVE, NEXT, PUSH, REPLACE, REVERSE, SET_FILTER, SORT, SPLICE, UNSHIFT } from './constants';
+import { ItemConstructorType } from './types/item-constructor';
 
 class Item<T> {
 	[Symbol.toPrimitive]: () => T;
@@ -16,15 +18,24 @@ class Item<T> {
 	}
 };
 
+// TODO: Create a new interface where each action source is specified upfront in the constructor:
+// export const Collect2 = <R, I extends Object>
+// ({ initial, stream, push, pop, sort, reverse, ... }) => {
+// }
+
 export const Collection = <R, I extends Object>
-	(initialValues = <R[]>[], ItemConstructor: ItemConstructorType<R> = Item<R>, CommandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
+	(initialValues = <R[]>[], ItemConstructor: ItemConstructorType<R> = Item<R>, commandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
 		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
 
 		const _source: I[] = initialValues.map(v => maybeNew(ItemConstructor, v));
-		const topic = new BehaviorSubject<UIOperation<I>>();
-		topic.next(['assign', wrapxy<I>(_source, topic, _source)] as UIOperation<I>);
-		//const topic = new Subject<UIOperation<I>>();
+		// const topic = new Subject<UIOperation<I>>();
+		const topic = new ReplaySubject<UIOperation<I>>(1);
+
 		const source = wrapxy<I[]>(_source, topic, _source);
+
+		if(_source.length) {
+			topic.next(['assign', source] as UIOperation<I>);
+		}
 
 		// TODO: review and clean up
 		const tee = (prop: ArrayModificationMethod, ...args) => {
@@ -70,16 +81,18 @@ export const Collection = <R, I extends Object>
 			// copyWithin
 			// fill
 
-			['splice', (start: number, deleteCount: number, ...newValues: I[]) => {
+			[SPLICE, (start: number, deleteCount: number, ...newValues: I[]) => {
 				const newItems = newValues.map(toItem);
 				_source.splice(start, deleteCount, ...newItems);
 				const wrapped = newItems.map(x => wrapxy<I>(x, topic, _source));
 				topic.next(<UIOperation<I>>['splice', [start, deleteCount, wrapped]]);
 			}],
 
-			['push', pushFn],
-			['next', pushFn], // So it can behave like an Observer
-			['unshift', unshiftFn],
+			[PUSH, pushFn],
+
+			[NEXT, pushFn], // So it can behave like an Observer
+
+			[UNSHIFT, unshiftFn],
 
 			['filter', (fn: (item: I) => void) =>
 				_source
@@ -95,38 +108,42 @@ export const Collection = <R, I extends Object>
 			}],
 			// findIndex: source.findIndex.bind(source),
 
-			['sort', (fn: (a: I, b: I) => number) => {
+			[SORT, (fn: (a: I, b: I) => number) => {
 				_source.sort(fn);
 				// TODO: use fn results for smart repositioning info...
 				topic.next(<['sort', I[]]>['sort', source]);
 				return source;
 			}],
 
-			['reverse', () => {
+			[REVERSE, () => {
 				_source.reverse();
 				topic.next(<['reverse', I[]]>['reverse', source]);
 				return source;
 			}],
 
-			['assign', (newItems: I[]) => {
+			[ASSIGN, (newItems: I[]) => {
 				//source = newItems // reminder not to do this, 'cause the other functions hold a reference to the array
 				_source.splice(0, Infinity, ...newItems);
 				topic.next(['assign', newItems.map(x => wrapxy<I>(x, topic, _source))]);
 				return source;
 			}],
 
-			['replace', (pos: number, newItem: I) => {
+			[REPLACE, (pos: number, newItem: I) => {
 				_source[pos] = newItem;
 				topic.next(['replace', [pos, newItem]]);
 				return source;
 			}],
 
-			['setFilter', (filterFn: (item: I) => boolean) => {
+			[SET_FILTER, (filterFn: (item: I) => boolean) => {
 				topic.next(['setFilter', filterFn]);
 				return source;
 			}],
 
-			['move', (src: number, dst: number, count: number = 1) => {
+			// UI operations need "move" to be a two step operation:
+			// preview the move (drag)
+			// complete it (drop)
+			// A move/undo operation pair may also do the trick?
+			[MOVE, (src: number, dst: number, count: number = 1) => {
 				const removed = _source.splice(src, count);
 				_source.splice(dst, 0, ...removed);
 				topic.next(['move', [src, dst, count]]);
@@ -138,25 +155,40 @@ export const Collection = <R, I extends Object>
 
 			//['toJSON', () => JSON.stringify(_source)],
 			['toJSON', () => _source],
+
 			['toString', () => JSON.stringify(_source)],
+
 			['toArray', () => _source],
+
 			['toWrappedArray', () => _source.map(x => wrapxy<I>(x, topic, _source))],
+
 			[Symbol.toStringTag, _source[Symbol.toStringTag]],
+
 			[Symbol.iterator, _source[Symbol.iterator]],
+
 			[Symbol.asyncIterator, _source[Symbol.asyncIterator]],
+
 			[Symbol.toPrimitive, _source[Symbol.toPrimitive]],
 
 			// WIP. experimental
 			// Tell Rimmel we're a sink
 			['type', 'sink'],
-			['sink', () => new CollectionSink(_m, HTMLList)],
+			['sink', () => CollectionSink(_m, HTMLList)],
 			['t', 'Collection'],
-			[Symbol.for('rml:sink'), () => new CollectionSink(_m, HTMLList)],
+			[Symbol.for('rml:sink'), () => CollectionSink(_m, HTMLList)],
 		]);
 
-		CommandStream?.subscribe(([cmd, ...args]) =>
-			_m.get(cmd)(...args)
-		);
+		if(commandStream?.subscribe) {
+			commandStream?.subscribe(([cmd, ...args]) =>
+				_m.get(cmd)(...args)
+			);
+		} else if(typeof commandStream == 'object') {
+			Object.entries(commandStream).forEach(([cmd, stream]) => {
+				stream.subscribe((args: any) =>
+					_m.get(cmd)(args)
+				);
+			});
+		};
 
 		return new Proxy(<I[]>_source, <ProxyHandler<I[]>>{
 			deleteProperty: (target, prop: any) => {
