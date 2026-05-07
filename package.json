@@ -13,7 +13,8 @@
     "serve": "vite preview"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "./observable-types.png"
   ],
   "stackblitz": {
     "startCommand": "vite"
