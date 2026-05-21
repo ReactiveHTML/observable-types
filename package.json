@@ -2,7 +2,7 @@
   "name": "observable-types",
   "version": "0.7.7",
   "type": "module",
-  "main": "dist/index.cjs",
+  "main": "dist/index.mjs",
   "module": "dist/index.mjs",
   "types": "dist/types/index.d.ts",
   "sideEffect": false,
@@ -41,5 +41,12 @@
     "rxjs": ">=5.5.0 || >=6.0.0 || >=7.8.1",
     "rimmel": "^1.4.0 || ^1.5.0 || ^1.6.0 || >=1.6.0-0 <1.7.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    }
+  }
 }

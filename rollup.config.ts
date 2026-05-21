@@ -49,7 +49,6 @@ export default [
       json(),
       typescript({
         tsconfig: './tsconfig.build.json',
-        sourceMap: true,
         declarationDir: './dist/types',
       }),
       terser(terserOptions),
@@ -59,52 +58,4 @@ export default [
       es,
     ],
   },
-
-
-  // {
-  //   input: './src/index.ts',
-  //   plugins: [
-  //     nodeResolve({ preferBuiltins: true }),
-  //     commonjs(),
-  //     json(),
-  //     typescript({
-  //       tsconfig: './tsconfig.build.json',
-  //       sourceMap: true,
-  //       declarationDir: './dist/types',
-  //     }),
-  //     terser(),
-  //   ],
-  //   output: [ cjs, es ],
-  //   external: [
-  //     ...peerDependencies,
-  //   ]
-  // },
-  // {
-  //   input: './src/index.ts',
-  //   plugins: [
-  //     nodeResolve({ preferBuiltins: true }),
-  //     commonjs(),
-  //     json(),
-  //     typescript({
-  //       tsconfig: './tsconfig.build.json',
-  //       sourceMap: true,
-  //       outDir: preserveModules.dir,
-  //       declaration: false,
-  //     }),
-  //     terser(),
-  //   ],
-  //   output: [
-  //     {
-  //       ...cjs,
-  //       ...preserveModules,
-  //     },
-  //     {
-  //       ...es,
-  //       ...preserveModules,
-  //     }
-  //   ],
-  //   external: [
-  //     ...peerDependencies,
-  //   ]
-  // },
 ] as RollupOptions[];

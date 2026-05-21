@@ -2,6 +2,8 @@
   "extends": "./tsconfig.base",
   "compilerOptions": {
     "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
     "rootDir": "./src",
   },
   "files": ["global.d.ts"],
