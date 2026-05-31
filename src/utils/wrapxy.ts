@@ -81,7 +81,6 @@ export const wrapxy =
 					});
 				} else if (prop == SymbolDelete) {
 					return () => {
-						// console.log('Wrapxy: _delete', target, prop, caller, obj);
 						// const idx = container.findIndex(x => obj == x);
 						const idx = container.indexOf(obj);
 						container.splice(idx, 1);
