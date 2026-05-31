@@ -7,4 +7,6 @@ export { Collection } from './collection';
 export { CollectionSink } from './collection-sink';
 export { HTMLList } from './templates/html-list';
 
+export { wrapxy } from './utils/wrapxy';
+
 export * from './constants';
