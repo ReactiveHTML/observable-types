@@ -23,9 +23,17 @@ class Item<T> {
 // ({ initial, stream, push, pop, sort, reverse, ... }) => {
 // }
 
+/**
+ * An array with observable operations that
+ * @param initialValues
+ * @param ItemConstructor
+ * @param commandStream
+ * @returns
+ */
 export const Collection = <R, I extends Object>
 	(initialValues = <R[]>[], ItemConstructor: ItemConstructorType<R> = Item<R>, commandStream?: Observable<UIOperation<I>>): ICollection<I, R> => {
 		const toItem = (x: any) => typeof x != 'object' ? maybeNew(ItemConstructor, x) : x;
+		let collectionProxy: ICollection<I, R>;
 
 		const _source: I[] = initialValues.map(v => maybeNew(ItemConstructor, v));
 		// const topic = new Subject<UIOperation<I>>();
@@ -112,13 +120,13 @@ export const Collection = <R, I extends Object>
 				_source.sort(fn);
 				// TODO: use fn results for smart repositioning info...
 				topic.next(<['sort', I[]]>['sort', source]);
-				return source;
+				return collectionProxy;
 			}],
 
 			[REVERSE, () => {
 				_source.reverse();
 				topic.next(<['reverse', I[]]>['reverse', source]);
-				return source;
+				return collectionProxy;
 			}],
 
 			[ASSIGN, (newItems: I[]) => {
@@ -190,7 +198,7 @@ export const Collection = <R, I extends Object>
 			});
 		};
 
-		return new Proxy(<I[]>_source, <ProxyHandler<I[]>>{
+		collectionProxy = new Proxy(<I[]>_source, <ProxyHandler<I[]>>{
 			deleteProperty: (target, prop: any) => {
 				if (isNaN(prop)) {
 					const r = delete target[prop];
@@ -212,5 +220,7 @@ export const Collection = <R, I extends Object>
 				);
 			},
 		});
+
+		return collectionProxy;
 	}
 ;
