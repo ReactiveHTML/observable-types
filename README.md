@@ -5,7 +5,7 @@ Reactive, Rendering-aware JavaScript primitives for data collections (e.g.: Arra
 
 With these you can create reactive collections and manage operations on them in either an imperative or stream-oriented style.
 
-Reactive bindings are exposed through the Observable and Observer interfaces (e.g.: RxJS) and integrates seamlessly with stream-oriented UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel).
+Reactive bindings are exposed through the Observable and Observer interfaces (e.g.: RxJS) and integrate seamlessly with stream-oriented UI libraries such as [Rimmel.js](https://github.com/reactivehtml/rimmel).
 
 ## Features
 ObservableTypes expose both the Observable and the Observer interfaces (like the Rx.Subject), which makes them suitable for piping, streaming and merging with other reactive event streams.
@@ -43,7 +43,8 @@ import { Collection } from 'observable-types';
 
 // Construct an Item from a value
 const Item = (value: string | number) =>
-  ({ value, created: Date.now() });
+  ({ value, created: Date.now() })
+;
 
 // Create a simple Collection and pass the
 // Item constructor for type integrity
@@ -163,30 +164,8 @@ document.body.innerHTML = rml`
 `;
 ```
 
-## Convenience
-Every method of a Collection can be used directly in your event handlers to dictate the exact behaviour in a point-free style:
-
-```typescript
-import { Collection, HTMLList } from 'observable-types';
-import { rml, Cut } from 'rimmel';
-
-const items = Collection(['foo', 'bar', 'baz']);
-
-document.body.innerHTML = rml`
-  <h1>List</h1>
-  <ul>
-    ${HTMLList(items)}
-  </ul>
-
-  Prepend new stuff: <input onchange="${Cut(items.unshift)}">
-  Append new stuff: <input onchange="${Cut(items.push)}">
-  <button onclick="${items.shift}">Remove first</button>
-  <button onclick="${items.pop}">Remove last</button>
-`;
-```
-
 ## Vanilla JS
-It's not mandatory to use any UI library, though. In fact, you can also live without and imperatively sink an Observable Collection down the DOM by passing it a target node.
+ObservableTypes doesn't require any UI library. In fact, you can also live without and imperatively sink an Observable Collection down the DOM by passing it a target node.
 
 ```typescript
 import type { ObservableItem } from 'observable-types';
@@ -212,6 +191,62 @@ setTimeout(() => items.pop(), 3000);
 setTimeout(() => items.shift(), 4000);
 ```
 
+## Convenience
+Every method of a Collection can be used directly in your event handlers to dictate the exact behaviour in a point-free style:
+
+```typescript
+import { Collection, HTMLList } from 'observable-types';
+import { rml, Cut } from 'rimmel';
+
+const items = Collection(['foo', 'bar', 'baz']);
+
+document.body.innerHTML = rml`
+  <h1>List</h1>
+  <ul>
+    ${HTMLList(items)}
+  </ul>
+
+  Prepend new stuff: <input onchange="${Cut(items.unshift)}">
+  Append new stuff: <input onchange="${Cut(items.push)}">
+  <button onclick="${items.shift}">Remove first</button>
+  <button onclick="${items.pop}">Remove last</button>
+`;
+```
+
+## Command Streams
+Traditional Array methods can be treated as streams by supplying them to a Collection at the creation phase.
+By doing that, imperative array methods such as `push` or `pop`  become ordinary Observers.
+
+```typescript
+import { Collection, HTMLList } from 'observable-types';
+import { rml, Cut } from 'rimmel';
+
+// A stream of array pushes. Emit here to add items
+const push = new Subject<Item>;
+
+// A stream of array pops. Emit here to remove the last item
+const pop = new Subject<any>;
+
+// A stream of array shifts. Emit here to remove the first item
+const shift = new Subject<any>;
+
+const ItemConstructor = (item) => (item);
+
+const items = Collection(['foo', 'bar', 'baz'], ItemConstructor, { push, pop });
+
+document.body.innerHTML = rml`
+  <h1>List</h1>
+  <ul>
+    ${HTMLList(items)}
+  </ul>
+
+  Append new stuff: <input onchange="${Cut(push)}"><br>
+
+  <button onclick="${shift}">Remove first item</button>
+  <button onclick="${pop}">Remove last item</button>
+`;
+```
+
 [Run on StackBlitz](https://stackblitz.com/edit/observable-types-no-framework)
 
 ## Playground
@@ -219,7 +254,8 @@ Check out the following [Kitchen Sink Application](https://stackblitz.com/edit/o
 
 ## Contributing
 Contributions are welcome!<br>
-Feel free to open issues, pull requests, mention ObservableTypes in your articles, threads, talks, books, etc.
+
+Feel free to open issues, submit pull requests, drop links in your articles, leave mentions in discussion threads, add stars on Github, etc.
 
 ## Development Setup
 ```bash
