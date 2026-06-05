@@ -85,7 +85,7 @@ Since the `Collection` notifications are semantic, they give enough information 
 
 All you need is the collection and a template to use for rendering new items.
 
-Observable Types best shine when used with an Observable-aware UI library such as [Rimmel](https://github.com/reactivehtml/rimmel), in which connecting an observable stream to the DOM is as trivial as putting it in the template:
+ObservableTypes best shine when used with an Observable-aware UI library such as [Rimmel.js](https://github.com/reactivehtml/rimmel):
 
 ## A Basic Example (with Rimmel.js)
 ```typescript
@@ -105,7 +105,7 @@ document.body.innerHTML = rml`
 ```
 [Run on StackBlitz](https://stackblitz.com/edit/observable-types-basics)
 
-In addition to the above, when you need to customise various aspects of your collection or the rendering, you can use item constructors and templates for your items as in the following example:
+In addition to the above, when you need to customise various aspects of your collection or the rendering, you can use item constructors and templates for your items as in the following example.
 
 ## Customisations (with Rimmel.js)
 Item Constructors can be used to conveniently construct valid Items from primitive values (like a string or a number) and be used automatically in the collection whenever a new item is added.
@@ -249,6 +249,21 @@ document.body.innerHTML = rml`
 
 [Run on StackBlitz](https://stackblitz.com/edit/observable-types-no-framework)
 
+## Creating Collections from Observables
+The previous examples illustrated the case when the data to populate a collection was statically provided.
+In most cases, though, the data you want comes from an API, or dynamically from a web socket.
+In those cases the `Collect` utility helps you exactly with that:
+```typescript
+import { webSocket } from 'rxjs/webSocket';
+import { Collect } from 'observable-types';
+
+const url = 'wss://host.xyz';
+const channel = webSocket({ url });
+const messages = Collect(channel);
+```
+
+[This chat room example](https://stackblitz.com/edit/deno-rimmel-chat-app) shows the use of the `Collect` utility in action, where messages from the WebSocket server are managed through a local `Collection` prior to rendering.
+
 ## Playground
 Check out the following [Kitchen Sink Application](https://stackblitz.com/edit/observable-types-kitchen-sink) where you can play and experiment with the whole feature set
 
@@ -257,7 +272,7 @@ Contributions are welcome!<br>
 
 Feel free to open issues, submit pull requests, drop links in your articles, leave mentions in discussion threads, add stars on Github, etc.
 
-## Development Setup
+## Local Development Setup
 ```bash
 npm install
 vite
