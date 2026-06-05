@@ -224,3 +224,10 @@ export const Collection = <R, I extends Object>
 		return collectionProxy;
 	}
 ;
+
+export const Collect = <T>(source: Future<T>, mapper) => {
+	const collection = Collection();
+	(source.subscribe ?? source.then)?.(collection);
+	return collection;
+};
+
