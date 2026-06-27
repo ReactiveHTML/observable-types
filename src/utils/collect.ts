@@ -12,6 +12,6 @@ import { Collection } from '../collection';
  */
 export const Collect = <T>(source: Observable<T>, constructor?: ItemConstructorType<T>) => {
 	const collection = Collection<T>([], constructor);
-	source.subscribe(collection.push);
+	setTimeout(source.subscribe.bind(source, collection.push.bind(collection)));
 	return collection;
 };
